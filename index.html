@@ -8,6 +8,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script>
+    // 奥様モードは明るい背景なので、ステータスバーも明るい方に合わせる（ホーム画面追加時に読まれる）
+    if (new URLSearchParams(location.search).get('mode') === 'wife') {
+      var sb = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+      if (sb) sb.setAttribute('content', 'default');
+      document.documentElement.classList.add('theme-soft-html');
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
   <meta name="apple-mobile-web-app-title" content="買い物・タスク">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#121212">
@@ -543,6 +553,69 @@
     @keyframes pspin { to { transform: rotate(360deg); } }
     .pending-card .ptext { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+    /* ==========================================
+       奥様モード用の柔らかいテーマ（?mode=wife で body.theme-soft）
+       ========================================== */
+    body.theme-soft {
+      --bg-color: #fbf6ee;
+      --card-bg: #ffffff;
+      --card-hover: #fff7f0;
+      --surface-border: #f0e4d6;
+      --text-main: #4a3f35;
+      --text-muted: #a8988a;
+      --primary: #e8907a;
+      --primary-gradient: linear-gradient(135deg, #f2a48f, #e8907a);
+      --record-color: #d9776a;
+      --record-gradient: linear-gradient(135deg, #e98a7a, #d9776a);
+      font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "BIZ UDPGothic", -apple-system, sans-serif;
+      background-image: radial-gradient(#efe3d3 1px, transparent 1px);
+      background-size: 18px 18px;
+    }
+    body.theme-soft .app-title { color: #c9654f; font-weight: 700; letter-spacing: 0.02em; }
+    body.theme-soft .icon-btn { background: #ffffff; border: 1px solid var(--surface-border); color: #c9654f; }
+    body.theme-soft .voice-section {
+      background: #fffaf3;
+      border: 1px solid #f3e6d6;
+      box-shadow: 0 6px 20px rgba(201, 101, 79, 0.08);
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+    }
+    body.theme-soft .soft-tagline { color: #a8988a; font-size: 13px; margin-bottom: 4px; }
+    body.theme-soft .soft-headline { color: #d8c4b2; font-size: 22px; font-weight: 700; margin-bottom: 14px; letter-spacing: 0.02em; }
+    body.theme-soft .mic-button {
+      width: 92px; height: 92px; border-radius: 28px;
+      background: var(--primary-gradient);
+      box-shadow: 0 10px 24px rgba(232, 144, 122, 0.4);
+    }
+    body.theme-soft .mic-button.recording { background: var(--record-gradient); box-shadow: 0 10px 28px rgba(217, 119, 106, 0.55); }
+    body.theme-soft .voice-status { color: #c9a89a; font-weight: 600; }
+    body.theme-soft .text-input { background: #ffffff; border-color: #efdfcf; color: var(--text-main); border-radius: 14px; }
+    body.theme-soft .text-input::placeholder { color: #b9a797; }
+    body.theme-soft .add-btn { background: #f4b7a3; color: #7a3f31; border-radius: 14px; }
+    body.theme-soft .add-btn:active { background: #e8907a; }
+    body.theme-soft .ai-result-box { background: #fff3ea; border-color: #f3cfbf; }
+    body.theme-soft .ai-transcript { color: #c9654f; }
+    body.theme-soft .ai-summary-list li { color: #6b5a4d; }
+    body.theme-soft .tabs-container { background: transparent; border: none; padding: 0; gap: 8px; }
+    body.theme-soft .tab-btn { background: #ffffff; border: 1px solid #f0e4d6; color: #a8988a; border-radius: 14px; }
+    body.theme-soft .tab-btn.active { background: #fde4da; border-color: #f6c8b8; color: #c9654f; box-shadow: none; }
+    body.theme-soft .tab-badge { background: #f5efe6; color: #a8988a; }
+    body.theme-soft .tab-btn.active .tab-badge { background: #e8907a; color: #ffffff; }
+    body.theme-soft .wife-mode-banner { display: none !important; }
+    body.theme-soft .task-item { background: #ffffff; border: 1px solid #f0e4d6; border-radius: 16px; box-shadow: 0 2px 8px rgba(201, 101, 79, 0.05); }
+    body.theme-soft .task-item.pending-complete { background: #fdf7f2; opacity: 0.6; }
+    body.theme-soft .task-item.pending-complete .task-title { color: #c4b3a3; }
+    body.theme-soft .task-check-btn { border-radius: 8px; border: 2px solid #e5d5c5; background: #fffaf5; }
+    body.theme-soft .task-check-btn.checked { background: #e8907a; border-color: #e8907a; color: #ffffff; }
+    body.theme-soft .task-title { color: #4a3f35; }
+    body.theme-soft .task-meta, body.theme-soft .task-time { color: #b5a394; }
+    body.theme-soft .task-due { color: #d9776a; }
+    body.theme-soft .undo-btn { background: #fde4da; border-color: #f6c8b8; color: #c9654f; }
+    body.theme-soft .pending-card { background: #fff3ea; border-color: #f3cfbf; color: #a56a58; }
+    body.theme-soft .pending-card .spin { border-color: #f3cfbf; border-top-color: #e8907a; }
+    body.theme-soft .empty-state, body.theme-soft .empty-text { color: #b5a394; }
+    body.theme-soft .toast { background: #4a3f35; color: #fff; }
+    body.theme-soft .loading-overlay { background: rgba(251, 246, 238, 0.85); color: #4a3f35; }
+
     .empty-state {
       display: none;
       flex-direction: column;
@@ -643,7 +716,7 @@
     <!-- ヘッダー -->
     <header class="app-header">
       <div class="app-title" id="appTitle">
-        <span>📋</span>
+        <span id="headerIcon">📋</span>
         <span id="headerTitleText">タスク一覧</span>
       </div>
       <div class="header-actions">
@@ -784,8 +857,18 @@
     window.addEventListener('DOMContentLoaded', () => {
       // mode=wife のUI調整：「買い物（共有）」と「私用（奥様専用リスト）」の2タブ
       if (isWifeMode) {
-        document.getElementById('wifeBanner').style.display = 'flex';
-        document.getElementById('headerTitleText').innerText = '買い物リスト';
+        document.body.classList.add('theme-soft');
+        document.getElementById('headerTitleText').innerText = 'おかいものメモ';
+        const hi = document.getElementById('headerIcon'); if (hi) hi.innerText = '🧺';
+        const micWrap = document.querySelector('.mic-button-wrapper');
+        if (micWrap) {
+          const tag = document.createElement('div'); tag.className = 'soft-tagline'; tag.innerText = '思いついたら、ひとこと。';
+          const head = document.createElement('div'); head.className = 'soft-headline'; head.innerText = 'なにを買っておく？';
+          micWrap.parentNode.insertBefore(tag, micWrap);
+          micWrap.parentNode.insertBefore(head, micWrap);
+        }
+        const vs = document.getElementById('voiceStatus'); if (vs) vs.innerText = 'タップして、話してね';
+        const ti = document.getElementById('textInput'); if (ti) ti.placeholder = '文字でもメモできるよ';
         const workTab = document.querySelector('.tab-btn[data-tab="work"]');
         if (workTab) workTab.style.display = 'none';
         const privTab = document.querySelector('.tab-btn[data-tab="private"]');
@@ -1315,7 +1398,7 @@
       const micBtn = document.getElementById('micBtn');
       micBtn.classList.remove('recording');
       micBtn.innerText = '🎙️';
-      document.getElementById('voiceStatus').innerText = 'タップして用件を喋るだけ';
+      document.getElementById('voiceStatus').innerText = isWifeMode ? 'タップして、話してね' : 'タップして用件を喋るだけ';
       document.getElementById('recordingTimer').style.display = 'none';
     }
 
