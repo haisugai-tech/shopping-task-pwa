@@ -731,7 +731,8 @@
     let tasksData = {
       shopping: [],
       work: [],
-      private: []
+      private: [],
+      wife_private: []
     };
 
     // 完了まわりの状態
@@ -751,7 +752,8 @@
       tasksData = {
         shopping: strip(tasks.shopping),
         work: strip(tasks.work),
-        private: strip(tasks.private)
+        private: strip(tasks.private),
+        wife_private: strip(tasks.wife_private)
       };
       updateBadges();
       renderTasks();
@@ -768,11 +770,17 @@
     // 初期化
     // ==========================================
     window.addEventListener('DOMContentLoaded', () => {
-      // mode=wife のUI調整
+      // mode=wife のUI調整：「買い物（共有）」と「私用（奥様専用リスト）」の2タブ
       if (isWifeMode) {
-        document.getElementById('tabsContainer').style.display = 'none';
         document.getElementById('wifeBanner').style.display = 'flex';
         document.getElementById('headerTitleText').innerText = '買い物リスト';
+        const workTab = document.querySelector('.tab-btn[data-tab="work"]');
+        if (workTab) workTab.style.display = 'none';
+        const privTab = document.querySelector('.tab-btn[data-tab="private"]');
+        if (privTab) {
+          privTab.dataset.tab = 'wife_private';
+          privTab.onclick = () => switchTab('wife_private');
+        }
         currentTab = 'shopping';
       }
 
@@ -851,7 +859,7 @@
     // タブ切り替え
     // ==========================================
     function switchTab(tabName) {
-      if (isWifeMode && tabName !== 'shopping') return;
+      if (isWifeMode && tabName !== 'shopping' && tabName !== 'wife_private') return;
       currentTab = tabName;
 
       // タブボタンのアクティブ状態更新
@@ -872,7 +880,7 @@
     function updateBadges() {
       const shopCount = (tasksData.shopping || []).length;
       const workCount = (tasksData.work || []).length;
-      const privCount = (tasksData.private || []).length;
+      const privCount = (tasksData[isWifeMode ? 'wife_private' : 'private'] || []).length;
 
       document.getElementById('badge-shopping').innerText = shopCount;
       document.getElementById('badge-work').innerText = workCount;
@@ -1260,8 +1268,16 @@
       // AI結果ボックスの表示
       showAiResult(res.transcript, res.summary);
 
-      // タスクリスト更新
-      if (res.tasks) {
+      // タスクリスト更新：登録した分だけ手元に足す（一覧を取り直さないぶん速い）
+      if (res.added) {
+        for (const cat of Object.keys(res.added)) {
+          const items = res.added[cat] || [];
+          if (!items.length) continue;
+          tasksData[cat] = items.concat(tasksData[cat] || []);
+        }
+        updateBadges();
+        renderTasks();
+      } else if (res.tasks) {
         applyServerTasks(res.tasks);
       } else {
         loadTasks();
