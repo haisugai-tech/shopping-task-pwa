@@ -532,6 +532,17 @@
     }
 
     /* Empty state */
+    /* 送信中の仮カード（一覧の上に出て、処理が終わると消える） */
+    .pending-area { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+    .pending-card {
+      display: flex; align-items: center; gap: 12px;
+      background: #14241c; border: 1px dashed #2f6f55; border-radius: var(--radius-md);
+      padding: 12px 14px; color: #a7f3d0; font-size: 14px;
+    }
+    .pending-card .spin { width: 16px; height: 16px; border: 2px solid #2f6f55; border-top-color: #34d399; border-radius: 50%; animation: pspin 0.9s linear infinite; flex-shrink: 0; }
+    @keyframes pspin { to { transform: rotate(360deg); } }
+    .pending-card .ptext { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
     .empty-state {
       display: none;
       flex-direction: column;
@@ -698,6 +709,7 @@
     </nav>
 
     <!-- タスク一覧 -->
+    <div class="pending-area" id="pendingArea"></div>
     <main class="task-list" id="taskList"></main>
 
     <!-- 空状態 -->
@@ -1196,8 +1208,26 @@
     }
 
     // 音声データを送信
+    // 送信中の仮カード管理：画面を止めず、次の入力をすぐ受け付ける
+    let pendingSeq = 0;
+    function addPending(label) {
+      const id = 'pending-' + (++pendingSeq);
+      const el = document.createElement('div');
+      el.className = 'pending-card';
+      el.id = id;
+      el.innerHTML = '<div class="spin"></div><div class="ptext"></div>';
+      el.querySelector('.ptext').innerText = label;
+      document.getElementById('pendingArea').prepend(el);
+      return id;
+    }
+    function removePending(id) {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    }
+
     async function processVoiceAudio(blob, mimeType) {
-      showLoading('音声をAI解析中...');
+      resetMicUI(); // マイクはすぐ次の録音に使える
+      const pid = addPending('🤖 音声を解析中…（このまま次の用件を話せます）');
       try {
         const base64Audio = await blobToBase64(blob);
         const res = await callGAS({
@@ -1206,13 +1236,11 @@
           mimeType: mimeType,
           textInput: null
         });
-
+        removePending(pid);
         handleVoiceSuccess(res);
       } catch (err) {
+        removePending(pid);
         await handleSubmitFailure(err, '音声解析に失敗しました');
-      } finally {
-        resetMicUI();
-        hideLoading();
       }
     }
 
@@ -1223,9 +1251,10 @@
       const msg = (err && err.message) || '';
       const isNetworkCut = /load failed|failed to fetch|network/i.test(msg);
       if (isNetworkCut) {
-        showLoading('通信が切れました。登録結果を確認中...');
+        const pid = addPending('⚠️ 通信が切れました。登録結果を確認中…');
         await new Promise(r => setTimeout(r, 4000));
         try { await loadTasks(true); } catch (e) {}
+        removePending(pid);
         showToast('通信が切れましたが、登録済みの可能性があります。一覧を確認してから再送してください', true);
       } else {
         showToast(msg || fallbackMsg, true);
@@ -1241,9 +1270,8 @@
       const text = input.value.trim();
       if (!text) return;
 
-      const addBtn = document.getElementById('addBtn');
-      addBtn.disabled = true;
-      showLoading('AIがタスク登録中...');
+      input.value = ''; // 送った瞬間に空にして、次の入力を受け付ける
+      const pid = addPending('🤖 解析中: ' + text);
 
       try {
         const res = await callGAS({
@@ -1252,14 +1280,11 @@
           mimeType: null,
           textInput: text
         });
-
-        input.value = '';
+        removePending(pid);
         handleVoiceSuccess(res);
       } catch (err) {
+        removePending(pid);
         await handleSubmitFailure(err, '追加に失敗しました');
-      } finally {
-        addBtn.disabled = false;
-        hideLoading();
       }
     }
 
