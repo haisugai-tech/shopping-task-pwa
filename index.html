@@ -426,6 +426,30 @@
       transform: scale(0.96) translateX(12px);
     }
 
+    /* 完了待ち（取り消し可能なグレー状態） */
+    .task-item.pending-complete {
+      opacity: 0.45;
+      background: #1a1a1a;
+    }
+    .task-item.pending-complete .task-title {
+      text-decoration: line-through;
+      color: #9ca3af;
+    }
+    .undo-btn {
+      margin-left: auto;
+      align-self: center;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid #52525b;
+      background: #27272a;
+      color: #e5e7eb;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .undo-btn:active { background: #3f3f46; }
+
     /* 丸いチェックボタン */
     .task-check-btn {
       width: 26px;
@@ -710,6 +734,29 @@
       private: []
     };
 
+    // 完了まわりの状態
+    // pendingComplete: タップ済みだがまだサーバーに送っていない（取り消し可能）タスク
+    // completedIds  : サーバーに完了を送った（送信中含む）タスク。古い応答で復活しないよう常に除外する
+    const UNDO_SECONDS = 10;
+    const pendingComplete = new Map(); // taskId -> { listId, remaining, timer }
+    const completedIds = new Set();
+
+    // サーバーから来た一覧を反映する唯一の入口。完了済み・完了待ちは必ず除外する
+    function applyServerTasks(tasks) {
+      if (!tasks) return;
+      const strip = arr => (arr || []).filter(t => {
+        const id = t.id || t.taskId;
+        return !completedIds.has(id);
+      });
+      tasksData = {
+        shopping: strip(tasks.shopping),
+        work: strip(tasks.work),
+        private: strip(tasks.private)
+      };
+      updateBadges();
+      renderTasks();
+    }
+
     // 音声録音用状態
     let mediaRecorder = null;
     let audioChunks = [];
@@ -789,13 +836,7 @@
       try {
         const res = await callGAS({ action: 'getTasks' });
         if (res.tasks) {
-          tasksData = {
-            shopping: res.tasks.shopping || [],
-            work: res.tasks.work || [],
-            private: res.tasks.private || []
-          };
-          updateBadges();
-          renderTasks();
+          applyServerTasks(res.tasks);
           if (isManualRefresh) showToast('最新のタスクに更新しました');
         }
       } catch (err) {
@@ -863,13 +904,15 @@
         const itemEl = document.createElement('div');
         itemEl.className = 'task-item';
         itemEl.id = `task-item-${taskId}`;
+        const pending = pendingComplete.get(taskId);
+        if (pending) itemEl.classList.add('pending-complete');
 
-        // チェックボタン
+        // チェックボタン（完了待ち中にもう一度押すと取り消し）
         const checkBtn = document.createElement('button');
-        checkBtn.className = 'task-check-btn';
+        checkBtn.className = 'task-check-btn' + (pending ? ' checked' : '');
         checkBtn.innerHTML = '✓';
-        checkBtn.setAttribute('aria-label', 'タスク完了');
-        checkBtn.onclick = () => completeTask(currentTab, taskId);
+        checkBtn.setAttribute('aria-label', pending ? '完了を取り消す' : 'タスク完了');
+        checkBtn.onclick = () => toggleComplete(currentTab, taskId);
 
         // タスク内容
         const contentEl = document.createElement('div');
@@ -910,6 +953,16 @@
 
         itemEl.appendChild(checkBtn);
         itemEl.appendChild(contentEl);
+
+        if (pending) {
+          const undoBtn = document.createElement('button');
+          undoBtn.className = 'undo-btn';
+          undoBtn.id = `undo-${taskId}`;
+          undoBtn.innerText = `元に戻す ${pending.remaining}`;
+          undoBtn.onclick = () => toggleComplete(currentTab, taskId);
+          itemEl.appendChild(undoBtn);
+        }
+
         listEl.appendChild(itemEl);
       });
     }
@@ -917,42 +970,50 @@
     // ==========================================
     // タスク完了処理
     // ==========================================
-    async function completeTask(listId, taskId) {
-      const itemEl = document.getElementById(`task-item-${taskId}`);
-      if (itemEl) {
-        const checkBtn = itemEl.querySelector('.task-check-btn');
-        if (checkBtn) checkBtn.classList.add('checked');
-        itemEl.classList.add('completing');
+    // チェックをタップ → 10秒間グレー表示（取り消し可能）→ 時間切れでGoogle Tasksに完了を送る
+    function toggleComplete(listId, taskId) {
+      if (pendingComplete.has(taskId)) {
+        // 取り消し
+        const p = pendingComplete.get(taskId);
+        clearInterval(p.timer);
+        pendingComplete.delete(taskId);
+        renderTasks();
+        return;
       }
 
+      const p = { listId, remaining: UNDO_SECONDS, timer: null };
+      pendingComplete.set(taskId, p);
+      renderTasks();
+
+      p.timer = setInterval(() => {
+        p.remaining--;
+        const btn = document.getElementById(`undo-${taskId}`);
+        if (btn) btn.innerText = `元に戻す ${p.remaining}`;
+        if (p.remaining <= 0) {
+          clearInterval(p.timer);
+          pendingComplete.delete(taskId);
+          commitComplete(listId, taskId);
+        }
+      }, 1000);
+    }
+
+    async function commitComplete(listId, taskId) {
+      // 先にローカルから消し、以後どの応答が来ても復活させない
+      completedIds.add(taskId);
+      tasksData[listId] = (tasksData[listId] || []).filter(t => (t.id || t.taskId) !== taskId);
+      updateBadges();
+      renderTasks();
+
       try {
-        const res = await callGAS({
-          action: 'completeTask',
-          listId: listId,
-          taskId: taskId
-        });
-
-        // サーバーから最新タスクが返ってきた場合は更新、なければローカル除外
-        if (res.tasks) {
-          tasksData = {
-            shopping: res.tasks.shopping || [],
-            work: res.tasks.work || [],
-            private: res.tasks.private || []
-          };
-        } else {
-          tasksData[listId] = (tasksData[listId] || []).filter(t => (t.id || t.taskId) !== taskId);
-        }
-
-        updateBadges();
-        renderTasks();
-        showToast('タスクを完了しました');
+        await callGAS({ action: 'completeTask', listId: listId, taskId: taskId });
       } catch (err) {
-        if (itemEl) {
-          itemEl.classList.remove('completing');
-          const checkBtn = itemEl.querySelector('.task-check-btn');
-          if (checkBtn) checkBtn.classList.remove('checked');
+        const msg = (err && err.message) || '';
+        // 通信が切れただけならサーバー側は完了している可能性が高いので、そのまま
+        if (!/load failed|failed to fetch|network/i.test(msg)) {
+          completedIds.delete(taskId);
+          showToast('完了を送れませんでした。一覧を更新します', true);
+          loadTasks(true);
         }
-        showToast(err.message || 'タスク完了処理に失敗しました', true);
       }
     }
 
@@ -967,14 +1028,68 @@
       }
     }
 
+    // 無音検知（5秒黙ったら自動停止）
+    const SILENCE_STOP_MS = 5000;     // 喋った後、これだけ無音なら送信
+    const NO_SPEECH_CANCEL_MS = 12000; // 一度も喋らなければ破棄
+    const SPEECH_RMS = 0.015;
+    let audioCtx = null;
+    let silenceTimer = null;
+    let discardRecording = false;
+
+    function startSilenceWatch(stream) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const src = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 1024;
+        src.connect(analyser);
+        const buf = new Float32Array(analyser.fftSize);
+        const startedAt = Date.now();
+        let lastSoundAt = 0;
+        let spoke = false;
+        const statusText = document.getElementById('voiceStatus');
+
+        silenceTimer = setInterval(() => {
+          analyser.getFloatTimeDomainData(buf);
+          let sum = 0;
+          for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+          const rms = Math.sqrt(sum / buf.length);
+          const now = Date.now();
+          if (rms > SPEECH_RMS) {
+            spoke = true;
+            lastSoundAt = now;
+            statusText.innerText = '🔴 聞き取り中... 5秒黙ると自動送信';
+          } else if (spoke) {
+            const left = Math.ceil((SILENCE_STOP_MS - (now - lastSoundAt)) / 1000);
+            if (left <= 0) { stopRecording(); return; }
+            statusText.innerText = `🔴 あと${left}秒で送信（続けて話せます）`;
+          } else if (now - startedAt > NO_SPEECH_CANCEL_MS) {
+            discardRecording = true;
+            stopRecording();
+            showToast('声が聞き取れなかったので取り消しました', true);
+          }
+        }, 200);
+      } catch (e) {
+        console.warn('無音検知を開始できません（タップ停止のみ）:', e);
+      }
+    }
+
+    function stopSilenceWatch() {
+      clearInterval(silenceTimer);
+      silenceTimer = null;
+      if (audioCtx) { try { audioCtx.close(); } catch (e) {} audioCtx = null; }
+    }
+
     async function startRecording() {
       try {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           alert('お使いの環境ではマイク録音がサポートされていません。テキスト入力をご利用ください。');
           return;
         }
+        discardRecording = false;
 
-        const stream = await navigator.mediaDevices.getUserMedia({ 
+        const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
@@ -1007,6 +1122,12 @@
 
         mediaRecorder.onstop = async () => {
           stream.getTracks().forEach(track => track.stop());
+          stopSilenceWatch();
+          if (discardRecording) {
+            discardRecording = false;
+            resetMicUI();
+            return;
+          }
           const actualMime = mediaRecorder.mimeType || mimeType || 'audio/mp4';
           const audioBlob = new Blob(audioChunks, { type: actualMime });
           await processVoiceAudio(audioBlob, actualMime);
@@ -1014,6 +1135,7 @@
 
         mediaRecorder.start();
         isRecording = true;
+        startSilenceWatch(stream);
 
         // UI更新
         const micBtn = document.getElementById('micBtn');
@@ -1022,7 +1144,7 @@
 
         const statusText = document.getElementById('voiceStatus');
         statusText.classList.add('recording-text');
-        statusText.innerText = '🔴 録音中... 話し終わったらタップ';
+        statusText.innerText = '🔴 録音中... 5秒黙ると自動送信（タップで即送信）';
 
         // タイマー開始
         recordSeconds = 0;
@@ -1044,10 +1166,12 @@
     }
 
     async function stopRecording() {
+      if (!isRecording) return;
+      isRecording = false;
+      stopSilenceWatch();
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
       }
-      isRecording = false;
       clearInterval(recordTimerInterval);
 
       // UIを処理中に更新
@@ -1138,13 +1262,7 @@
 
       // タスクリスト更新
       if (res.tasks) {
-        tasksData = {
-          shopping: res.tasks.shopping || [],
-          work: res.tasks.work || [],
-          private: res.tasks.private || []
-        };
-        updateBadges();
-        renderTasks();
+        applyServerTasks(res.tasks);
       } else {
         loadTasks();
       }
