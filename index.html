@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>買い物・タスク</title>
+  
+  <!-- iOS / PWA メタタグ -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="買い物・タスク">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#121212">
+
+  <!-- アイコン -->
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    :root {
+      --bg-color: #121212;
+      --card-bg: #1e1e1e;
+      --card-hover: #262626;
+      --surface-border: #2d2d2d;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #10b981;
+      --primary-gradient: linear-gradient(135deg, #10b981, #06b6d4);
+      --record-color: #ef4444;
+      --record-gradient: linear-gradient(135deg, #ef4444, #f43f5e);
+      --accent-blue: #3b82f6;
+      --accent-amber: #f59e0b;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-full: 9999px;
+      --safe-top: env(safe-area-inset-top, 20px);
+      --safe-bottom: env(safe-area-inset-bottom, 20px);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      overflow-x: hidden;
+      display: flex;
+      justify-content: center;
+      background-attachment: fixed;
+    }
+
+    /* メインコンテナ: 横スクロール完全防止・最大幅480px */
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      min-height: 100vh;
+      padding: calc(var(--safe-top) + 12px) 16px calc(var(--safe-bottom) + 24px);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* ヘッダー */
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .app-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .icon-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--surface-border);
+      color: var(--text-muted);
+      border-radius: var(--radius-full);
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .icon-btn:active {
+      transform: scale(0.92);
+      color: var(--text-main);
+      border-color: var(--text-muted);
+    }
+
+    .icon-btn.spinning {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    /* 録音セクション */
+    .voice-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 12px 20px;
+      background: linear-gradient(180deg, rgba(30, 30, 30, 0.7) 0%, rgba(20, 20, 20, 0.4) 100%);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .mic-button-wrapper {
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .mic-button {
+      width: 84px;
+      height: 84px;
+      border-radius: var(--radius-full);
+      border: none;
+      background: var(--primary-gradient);
+      color: #ffffff;
+      font-size: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      z-index: 2;
+    }
+
+    .mic-button:active {
+      transform: scale(0.94);
+    }
+
+    .mic-button.recording {
+      background: var(--record-gradient);
+      box-shadow: 0 8px 28px rgba(239, 68, 68, 0.55);
+      animation: recordGlow 1.5s infinite alternate;
+    }
+
+    @keyframes recordGlow {
+      0% { transform: scale(1); box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+      100% { transform: scale(1.06); box-shadow: 0 0 32px rgba(239, 68, 68, 0.8); }
+    }
+
+    /* 波紋エフェクト */
+    .pulse-ring {
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      right: -10px;
+      bottom: -10px;
+      border-radius: var(--radius-full);
+      border: 2px solid rgba(239, 68, 68, 0.6);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .mic-button.recording + .pulse-ring {
+      animation: ripple 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+
+    @keyframes ripple {
+      0% { transform: scale(0.9); opacity: 0.8; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+
+    .voice-status {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-align: center;
+      min-height: 20px;
+      transition: color 0.2s;
+    }
+
+    .voice-status.recording-text {
+      color: #f87171;
+      font-weight: 600;
+    }
+
+    .recording-timer {
+      font-size: 12px;
+      color: #fca5a5;
+      margin-top: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* テキスト入力欄 */
+    .text-input-form {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      margin-top: 14px;
+    }
+
+    .text-input {
+      flex: 1;
+      background: rgba(18, 18, 18, 0.85);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      color: var(--text-main);
+      font-size: 15px;
+      outline: none;
+      user-select: text;
+      transition: border-color 0.2s;
+    }
+
+    .text-input:focus {
+      border-color: var(--primary);
+    }
+
+    .text-input::placeholder {
+      color: #6b7280;
+    }
+
+    .add-btn {
+      background: var(--primary);
+      border: none;
+      border-radius: var(--radius-md);
+      color: #ffffff;
+      padding: 0 18px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .add-btn:active {
+      transform: scale(0.95);
+      background: #059669;
+    }
+
+    .add-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* AI処理通知ボックス */
+    .ai-result-box {
+      display: none;
+      background: #18221f;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      margin-bottom: 16px;
+      animation: fadeIn 0.3s ease;
+      position: relative;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .ai-result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .ai-transcript {
+      font-size: 14px;
+      font-weight: 600;
+      color: #34d399;
+      line-height: 1.4;
+      padding-right: 20px;
+      word-break: break-word;
+    }
+
+    .ai-close-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 2px 6px;
+    }
+
+    .ai-summary-list {
+      font-size: 13px;
+      color: #d1fae5;
+      line-height: 1.5;
+      list-style-type: none;
+      margin-left: 2px;
+    }
+
+    .ai-summary-list li {
+      margin-top: 4px;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .ai-summary-list li::before {
+      content: "✔";
+      color: #10b981;
+      font-size: 11px;
+    }
+
+    /* タブ切り替えバー */
+    .tabs-container {
+      display: flex;
+      background: #1a1a1a;
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      gap: 4px;
+      margin-bottom: 16px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 10px 4px;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn.active {
+      background: #2b2b2b;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    }
+
+    .tab-badge {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: var(--radius-full);
+      min-width: 18px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active .tab-badge {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    /* wifeモード時の単一バナー */
+    .wife-mode-banner {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(244, 63, 94, 0.12);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      border-radius: var(--radius-md);
+      color: #fda4af;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    /* タスクリスト一覧 */
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .task-item {
+      background: var(--card-bg);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 14px 14px 14px 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .task-item.completing {
+      opacity: 0.35;
+      transform: scale(0.96) translateX(12px);
+    }
+
+    /* 丸いチェックボタン */
+    .task-check-btn {
+      width: 26px;
+      height: 26px;
+      min-width: 26px;
+      border-radius: var(--radius-full);
+      border: 2px solid #52525b;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+      transition: all 0.2s ease;
+      color: transparent;
+      font-size: 13px;
+    }
+
+    .task-check-btn:active {
+      transform: scale(0.85);
+      border-color: var(--primary);
+    }
+
+    .task-check-btn.checked {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    /* タスクコンテンツ */
+    .task-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .task-title {
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 1.45;
+      color: var(--text-main);
+      word-break: break-word;
+      transition: color 0.2s, text-decoration 0.2s;
+    }
+
+    .task-item.completed .task-title {
+      color: #71717a;
+      text-decoration: line-through;
+    }
+
+    .task-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .task-time {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .task-due {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      padding: 1px 7px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .task-due.due-urgent {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+
+    /* Empty state */
+    .empty-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 16px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.8;
+    }
+
+    .empty-text {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .empty-subtext {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    /* ローディングオーバーレイ */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 4px solid rgba(255, 255, 255, 0.15);
+      border-top-color: var(--primary);
+      border-radius: var(--radius-full);
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loading-text {
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+    }
+
+    /* トースト通知 */
+    .toast {
+      position: fixed;
+      bottom: calc(var(--safe-bottom) + 20px);
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: var(--radius-full);
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      z-index: 200;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 90%;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .toast.error {
+      background: #451a1a;
+      border-color: #7f1d1d;
+      color: #fca5a5;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- ヘッダー -->
+    <header class="app-header">
+      <div class="app-title" id="appTitle">
+        <span>📋</span>
+        <span id="headerTitleText">タスク一覧</span>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="refreshBtn" title="タスク再読み込み" onclick="loadTasks(true)">
+          🔄
+        </button>
+      </div>
+    </header>
+
+    <!-- 音声・テキスト入力セクション -->
+    <section class="voice-section">
+      <div class="mic-button-wrapper">
+        <button class="mic-button" id="micBtn" onclick="handleMicClick()" aria-label="音声録音">
+          🎙️
+        </button>
+        <div class="pulse-ring"></div>
+      </div>
+      <div class="voice-status" id="voiceStatus">タップして用件を喋るだけ</div>
+      <div class="recording-timer" id="recordingTimer" style="display: none;">00:00</div>
+
+      <!-- テキスト入力 -->
+      <form class="text-input-form" onsubmit="handleTextSubmit(event)">
+        <input 
+          type="text" 
+          id="textInput" 
+          class="text-input" 
+          placeholder="文字入力でも追加できます..." 
+          autocomplete="off"
+        />
+        <button type="submit" id="addBtn" class="add-btn">追加</button>
+      </form>
+    </section>
+
+    <!-- AI処理結果通知ボックス -->
+    <div class="ai-result-box" id="aiResultBox">
+      <div class="ai-result-header">
+        <div class="ai-transcript" id="aiTranscript">🗣️「牛乳とパンを買う」</div>
+        <button class="ai-close-btn" onclick="hideAiResult()">✕</button>
+      </div>
+      <ul class="ai-summary-list" id="aiSummaryList"></ul>
+    </div>
+
+    <!-- mode=wife専用バナー -->
+    <div class="wife-mode-banner" id="wifeBanner">
+      <span>🛒</span>
+      <span>買い物リスト専用モード</span>
+    </div>
+
+    <!-- タブ切り替えバー（通常時） -->
+    <nav class="tabs-container" id="tabsContainer">
+      <button class="tab-btn active" data-tab="shopping" onclick="switchTab('shopping')">
+        <span>🛒 買い物</span>
+        <span class="tab-badge" id="badge-shopping">0</span>
+      </button>
+      <button class="tab-btn" data-tab="work" onclick="switchTab('work')">
+        <span>💼 仕事</span>
+        <span class="tab-badge" id="badge-work">0</span>
+      </button>
+      <button class="tab-btn" data-tab="private" onclick="switchTab('private')">
+        <span>🏠 私用</span>
+        <span class="tab-badge" id="badge-private">0</span>
+      </button>
+    </nav>
+
+    <!-- タスク一覧 -->
+    <main class="task-list" id="taskList"></main>
+
+    <!-- 空状態 -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🎉</div>
+      <div class="empty-text">タスクはありません</div>
+      <div class="empty-subtext">マイクかテキストで追加してみましょう</div>
+    </div>
+  </div>
+
+  <!-- ローディングオーバーレイ -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">読み込み中...</div>
+  </div>
+
+  <!-- トースト通知 -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ==========================================
+    // 定数・状態管理
+    // ==========================================
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbz5eHHtf_eg60uQGTKoUTE6ICW5qMBCZEpeND83FgaAnn6HGTULYlwrKGEUNrX2k7YAtA/exec";
+    
+    // URLパラメータ判定 (?mode=wife)
+    const urlParams = new URLSearchParams(window.location.search);
+    const isWifeMode = urlParams.get('mode') === 'wife';
+
+    let currentTab = 'shopping'; // 'shopping' | 'work' | 'private'
+    let tasksData = {
+      shopping: [],
+      work: [],
+      private: []
+    };
+
+    // 音声録音用状態
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+    let recordTimerInterval = null;
+    let recordSeconds = 0;
+
+    // ==========================================
+    // 初期化
+    // ==========================================
+    window.addEventListener('DOMContentLoaded', () => {
+      // mode=wife のUI調整
+      if (isWifeMode) {
+        document.getElementById('tabsContainer').style.display = 'none';
+        document.getElementById('wifeBanner').style.display = 'flex';
+        document.getElementById('headerTitleText').innerText = '買い物リスト';
+        currentTab = 'shopping';
+      }
+
+      // 初回タスク読み込み
+      loadTasks();
+
+      // Service Worker 登録
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(err => {
+          console.log('SW登録スキップ/エラー:', err);
+        });
+      }
+    });
+
+    // ==========================================
+    // GAS API 通信 (POST text/plain)
+    // ==========================================
+    async function callGAS(payload) {
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const text = await response.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error("GASレスポンスJSON解析エラー:", text);
+          throw new Error("GAS側でdoPostが未設定か、無効なレスポンスが返されました。");
+        }
+
+        if (data.status !== 'ok') {
+          throw new Error(data.message || '処理中にエラーが発生しました');
+        }
+
+        return data;
+      } catch (err) {
+        console.error('GAS通信エラー:', err);
+        throw err;
+      }
+    }
+
+    // ==========================================
+    // タスク読み込み
+    // ==========================================
+    async function loadTasks(isManualRefresh = false) {
+      const refreshBtn = document.getElementById('refreshBtn');
+      if (isManualRefresh) {
+        refreshBtn.classList.add('spinning');
+      } else {
+        showLoading('タスクを取得中...');
+      }
+
+      try {
+        const res = await callGAS({ action: 'getTasks' });
+        if (res.tasks) {
+          tasksData = {
+            shopping: res.tasks.shopping || [],
+            work: res.tasks.work || [],
+            private: res.tasks.private || []
+          };
+          updateBadges();
+          renderTasks();
+          if (isManualRefresh) showToast('最新のタスクに更新しました');
+        }
+      } catch (err) {
+        showToast(err.message || 'タスクの取得に失敗しました', true);
+      } finally {
+        hideLoading();
+        refreshBtn.classList.remove('spinning');
+      }
+    }
+
+    // ==========================================
+    // タブ切り替え
+    // ==========================================
+    function switchTab(tabName) {
+      if (isWifeMode && tabName !== 'shopping') return;
+      currentTab = tabName;
+
+      // タブボタンのアクティブ状態更新
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        if (btn.dataset.tab === tabName) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      renderTasks();
+    }
+
+    // ==========================================
+    // バッジ更新
+    // ==========================================
+    function updateBadges() {
+      const shopCount = (tasksData.shopping || []).length;
+      const workCount = (tasksData.work || []).length;
+      const privCount = (tasksData.private || []).length;
+
+      document.getElementById('badge-shopping').innerText = shopCount;
+      document.getElementById('badge-work').innerText = workCount;
+      document.getElementById('badge-private').innerText = privCount;
+    }
+
+    // ==========================================
+    // タスク描画
+    // ==========================================
+    function renderTasks() {
+      const listEl = document.getElementById('taskList');
+      const emptyEl = document.getElementById('emptyState');
+      const tasks = tasksData[currentTab] || [];
+
+      listEl.innerHTML = '';
+
+      if (tasks.length === 0) {
+        emptyEl.style.display = 'flex';
+        return;
+      }
+      emptyEl.style.display = 'none';
+
+      tasks.forEach(task => {
+        const taskId = task.id || task.taskId;
+        const title = task.title || task.name || '(無題)';
+        const updatedStr = task.updated || task.updatedAt || task.created;
+        const dueStr = task.due || task.dueDate;
+
+        const itemEl = document.createElement('div');
+        itemEl.className = 'task-item';
+        itemEl.id = `task-item-${taskId}`;
+
+        // チェックボタン
+        const checkBtn = document.createElement('button');
+        checkBtn.className = 'task-check-btn';
+        checkBtn.innerHTML = '✓';
+        checkBtn.setAttribute('aria-label', 'タスク完了');
+        checkBtn.onclick = () => completeTask(currentTab, taskId);
+
+        // タスク内容
+        const contentEl = document.createElement('div');
+        contentEl.className = 'task-content';
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'task-title';
+        titleEl.innerText = title;
+        contentEl.appendChild(titleEl);
+
+        // メタ情報（追加日時・期限）
+        const metaEl = document.createElement('div');
+        metaEl.className = 'task-meta';
+
+        // 追加相対時間
+        const relativeTime = formatRelativeTime(updatedStr);
+        if (relativeTime) {
+          const timeSpan = document.createElement('span');
+          timeSpan.className = 'task-time';
+          timeSpan.innerText = `⏱ ${relativeTime}`;
+          metaEl.appendChild(timeSpan);
+        }
+
+        // 期限日
+        if (dueStr) {
+          const dueInfo = formatDueDate(dueStr);
+          if (dueInfo) {
+            const dueSpan = document.createElement('span');
+            dueSpan.className = `task-due ${dueInfo.isUrgent ? 'due-urgent' : ''}`;
+            dueSpan.innerText = `📅 ${dueInfo.text}`;
+            metaEl.appendChild(dueSpan);
+          }
+        }
+
+        if (metaEl.childNodes.length > 0) {
+          contentEl.appendChild(metaEl);
+        }
+
+        itemEl.appendChild(checkBtn);
+        itemEl.appendChild(contentEl);
+        listEl.appendChild(itemEl);
+      });
+    }
+
+    // ==========================================
+    // タスク完了処理
+    // ==========================================
+    async function completeTask(listId, taskId) {
+      const itemEl = document.getElementById(`task-item-${taskId}`);
+      if (itemEl) {
+        const checkBtn = itemEl.querySelector('.task-check-btn');
+        if (checkBtn) checkBtn.classList.add('checked');
+        itemEl.classList.add('completing');
+      }
+
+      try {
+        const res = await callGAS({
+          action: 'completeTask',
+          listId: listId,
+          taskId: taskId
+        });
+
+        // サーバーから最新タスクが返ってきた場合は更新、なければローカル除外
+        if (res.tasks) {
+          tasksData = {
+            shopping: res.tasks.shopping || [],
+            work: res.tasks.work || [],
+            private: res.tasks.private || []
+          };
+        } else {
+          tasksData[listId] = (tasksData[listId] || []).filter(t => (t.id || t.taskId) !== taskId);
+        }
+
+        updateBadges();
+        renderTasks();
+        showToast('タスクを完了しました');
+      } catch (err) {
+        if (itemEl) {
+          itemEl.classList.remove('completing');
+          const checkBtn = itemEl.querySelector('.task-check-btn');
+          if (checkBtn) checkBtn.classList.remove('checked');
+        }
+        showToast(err.message || 'タスク完了処理に失敗しました', true);
+      }
+    }
+
+    // ==========================================
+    // 音声録音（MediaRecorder / iOS Safari対応）
+    // ==========================================
+    async function handleMicClick() {
+      if (!isRecording) {
+        await startRecording();
+      } else {
+        await stopRecording();
+      }
+    }
+
+    async function startRecording() {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          alert('お使いの環境ではマイク録音がサポートされていません。テキスト入力をご利用ください。');
+          return;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          } 
+        });
+
+        audioChunks = [];
+
+        // iOS Safari では audio/mp4, その他ブラウザでは audio/webm を優先
+        let mimeType = '';
+        if (window.MediaRecorder) {
+          if (MediaRecorder.isTypeSupported('audio/mp4')) {
+            mimeType = 'audio/mp4';
+          } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            mimeType = 'audio/webm;codecs=opus';
+          } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+            mimeType = 'audio/webm';
+          }
+        }
+
+        const options = mimeType ? { mimeType } : {};
+        mediaRecorder = new MediaRecorder(stream, options);
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            audioChunks.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          stream.getTracks().forEach(track => track.stop());
+          const actualMime = mediaRecorder.mimeType || mimeType || 'audio/mp4';
+          const audioBlob = new Blob(audioChunks, { type: actualMime });
+          await processVoiceAudio(audioBlob, actualMime);
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+
+        // UI更新
+        const micBtn = document.getElementById('micBtn');
+        micBtn.classList.add('recording');
+        micBtn.innerText = '⏹️';
+
+        const statusText = document.getElementById('voiceStatus');
+        statusText.classList.add('recording-text');
+        statusText.innerText = '🔴 録音中... 話し終わったらタップ';
+
+        // タイマー開始
+        recordSeconds = 0;
+        const timerEl = document.getElementById('recordingTimer');
+        timerEl.style.display = 'block';
+        timerEl.innerText = '00:00';
+        clearInterval(recordTimerInterval);
+        recordTimerInterval = setInterval(() => {
+          recordSeconds++;
+          const min = String(Math.floor(recordSeconds / 60)).padStart(2, '0');
+          const sec = String(recordSeconds % 60).padStart(2, '0');
+          timerEl.innerText = `${min}:${sec}`;
+        }, 1000);
+
+      } catch (err) {
+        console.error('マイクアクセス失敗:', err);
+        alert('マイクの使用が許可されていません。ブラウザ設定でマイクを許可してください。');
+      }
+    }
+
+    async function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      isRecording = false;
+      clearInterval(recordTimerInterval);
+
+      // UIを処理中に更新
+      const micBtn = document.getElementById('micBtn');
+      micBtn.classList.remove('recording');
+      micBtn.innerText = '⏳';
+
+      const statusText = document.getElementById('voiceStatus');
+      statusText.classList.remove('recording-text');
+      statusText.innerText = '🤖 AIが解析中...';
+
+      const timerEl = document.getElementById('recordingTimer');
+      timerEl.style.display = 'none';
+    }
+
+    // 音声データを送信
+    async function processVoiceAudio(blob, mimeType) {
+      showLoading('音声をAI解析中...');
+      try {
+        const base64Audio = await blobToBase64(blob);
+        const res = await callGAS({
+          action: 'processVoice',
+          base64Audio: base64Audio,
+          mimeType: mimeType,
+          textInput: null
+        });
+
+        handleVoiceSuccess(res);
+      } catch (err) {
+        showToast(err.message || '音声解析に失敗しました', true);
+      } finally {
+        resetMicUI();
+        hideLoading();
+      }
+    }
+
+    // ==========================================
+    // テキスト入力送信
+    // ==========================================
+    async function handleTextSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById('textInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const addBtn = document.getElementById('addBtn');
+      addBtn.disabled = true;
+      showLoading('AIがタスク登録中...');
+
+      try {
+        const res = await callGAS({
+          action: 'processVoice',
+          base64Audio: null,
+          mimeType: null,
+          textInput: text
+        });
+
+        input.value = '';
+        handleVoiceSuccess(res);
+      } catch (err) {
+        showToast(err.message || '追加に失敗しました', true);
+      } finally {
+        addBtn.disabled = false;
+        hideLoading();
+      }
+    }
+
+    // 音声・テキスト成功時の共通反映
+    function handleVoiceSuccess(res) {
+      // AI結果ボックスの表示
+      showAiResult(res.transcript, res.summary);
+
+      // タスクリスト更新
+      if (res.tasks) {
+        tasksData = {
+          shopping: res.tasks.shopping || [],
+          work: res.tasks.work || [],
+          private: res.tasks.private || []
+        };
+        updateBadges();
+        renderTasks();
+      } else {
+        loadTasks();
+      }
+
+      showToast('タスクを追加しました！');
+    }
+
+    function resetMicUI() {
+      const micBtn = document.getElementById('micBtn');
+      micBtn.classList.remove('recording');
+      micBtn.innerText = '🎙️';
+      document.getElementById('voiceStatus').innerText = 'タップして用件を喋るだけ';
+      document.getElementById('recordingTimer').style.display = 'none';
+    }
+
+    // Blob -> Base64変換
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result;
+          const base64 = result.split(',')[1] || '';
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    // ==========================================
+    // AI結果表示
+    // ==========================================
+    function showAiResult(transcript, summary) {
+      const box = document.getElementById('aiResultBox');
+      const transcriptEl = document.getElementById('aiTranscript');
+      const summaryList = document.getElementById('aiSummaryList');
+
+      transcriptEl.innerText = transcript ? `🗣️「${transcript}」` : '📝 入力完了';
+      summaryList.innerHTML = '';
+
+      if (Array.isArray(summary) && summary.length > 0) {
+        summary.forEach(item => {
+          const li = document.createElement('li');
+          li.innerText = item;
+          summaryList.appendChild(li);
+        });
+      } else {
+        const li = document.createElement('li');
+        li.innerText = 'タスクを登録しました';
+        summaryList.appendChild(li);
+      }
+
+      box.style.display = 'block';
+    }
+
+    function hideAiResult() {
+      document.getElementById('aiResultBox').style.display = 'none';
+    }
+
+    // ==========================================
+    // 日付フォーマット関数
+    // ==========================================
+    function formatRelativeTime(dateStr) {
+      if (!dateStr) return '';
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return '';
+
+      const now = new Date();
+      const diffSec = Math.floor((now - date) / 1000);
+
+      if (diffSec < 60) return 'たった今';
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin}分前`;
+      const diffHours = Math.floor(diffMin / 60);
+      if (diffHours < 24) return `${diffHours}時間前`;
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays === 1) return '昨日';
+      if (diffDays < 7) return `${diffDays}日前`;
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    }
+
+    function formatDueDate(dueStr) {
+      if (!dueStr) return null;
+      const date = new Date(dueStr);
+      if (isNaN(date.getTime())) {
+        return { text: dueStr, isUrgent: false };
+      }
+
+      const m = date.getMonth() + 1;
+      const d = date.getDate();
+      const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+      const day = dayNames[date.getDay()];
+
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const dueDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const diffDays = Math.round((dueDay - today) / (1000 * 60 * 60 * 24));
+
+      let prefix = '';
+      let isUrgent = false;
+
+      if (diffDays < 0) {
+        prefix = '期限切れ ';
+        isUrgent = true;
+      } else if (diffDays === 0) {
+        prefix = '今日 ';
+        isUrgent = true;
+      } else if (diffDays === 1) {
+        prefix = '明日 ';
+      }
+
+      return {
+        text: `${prefix}${m}/${d}(${day})`,
+        isUrgent: isUrgent
+      };
+    }
+
+    // ==========================================
+    // ユーティリティ (ローディング & トースト)
+    // ==========================================
+    function showLoading(msg = '処理中...') {
+      document.getElementById('loadingText').innerText = msg;
+      document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    let toastTimer = null;
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      if (isError) {
+        toast.classList.add('error');
+      } else {
+        toast.classList.remove('error');
+      }
+      toast.classList.add('show');
+
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3500);
+    }
+  </script>
+</body>
+</html>
