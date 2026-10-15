@@ -2,7 +2,7 @@
   "name": "おかいものメモ",
   "short_name": "おかいもの",
   "description": "思いついたら、ひとこと。音声で買い物メモ",
-  "start_url": "./?mode=wife",
+  "start_url": "./wife.html",
   "display": "standalone",
   "background_color": "#fbf6ee",
   "theme_color": "#fbf6ee",

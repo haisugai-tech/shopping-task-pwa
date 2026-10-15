@@ -1,7 +1,8 @@
-const CACHE_NAME = 'task-pwa-v7';
+const CACHE_NAME = 'task-pwa-v8';
 const ASSETS = [
   './',
   './index.html',
+  './wife.html',
   './manifest.json',
   './manifest-wife.json',
   './icon-192.png',

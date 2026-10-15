@@ -20,7 +20,7 @@
   <link rel="manifest" href="manifest.json">
   <script>
     // 奥様モードは明るい背景なので、ステータスバーも明るい方に合わせる（ホーム画面追加時に読まれる）
-    if (new URLSearchParams(location.search).get('mode') === 'wife') {
+    if (new URLSearchParams(location.search).get('mode') === 'wife' || /\/wife\.html$/.test(location.pathname)) {
       var sb = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
       if (sb) sb.setAttribute('content', 'default');
       // ホーム画面追加時に ?mode=wife が落ちないよう、奥様用manifest（起動URL付き）に差し替える
@@ -817,7 +817,7 @@
     
     // URLパラメータ判定 (?mode=wife)
     const urlParams = new URLSearchParams(window.location.search);
-    const isWifeMode = urlParams.get('mode') === 'wife';
+    const isWifeMode = urlParams.get('mode') === 'wife' || /\/wife\.html$/.test(location.pathname);
 
     let currentTab = 'shopping'; // 'shopping' | 'work' | 'private'
     let tasksData = {
