@@ -8,14 +8,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <script>
-    // 奥様モードは明るい背景なので、ステータスバーも明るい方に合わせる（ホーム画面追加時に読まれる）
-    if (new URLSearchParams(location.search).get('mode') === 'wife') {
-      var sb = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
-      if (sb) sb.setAttribute('content', 'default');
-      document.documentElement.classList.add('theme-soft-html');
-    }
-  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
   <meta name="apple-mobile-web-app-title" content="買い物・タスク">
@@ -26,6 +18,21 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="manifest" href="manifest.json">
+  <script>
+    // 奥様モードは明るい背景なので、ステータスバーも明るい方に合わせる（ホーム画面追加時に読まれる）
+    if (new URLSearchParams(location.search).get('mode') === 'wife') {
+      var sb = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+      if (sb) sb.setAttribute('content', 'default');
+      // ホーム画面追加時に ?mode=wife が落ちないよう、奥様用manifest（起動URL付き）に差し替える
+      var mf = document.querySelector('link[rel="manifest"]');
+      if (mf) mf.setAttribute('href', 'manifest-wife.json');
+      var tc = document.querySelector('meta[name="theme-color"]');
+      if (tc) tc.setAttribute('content', '#fbf6ee');
+      var at = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+      if (at) at.setAttribute('content', 'おかいものメモ');
+      document.documentElement.classList.add('theme-soft-html');
+    }
+  </script>
 
   <style>
     :root {
@@ -928,11 +935,15 @@
     // ==========================================
     // タスク読み込み
     // ==========================================
-    async function loadTasks(isManualRefresh = false) {
+    let lastLoadedAt = 0;
+    // mode: 'initial'（全画面ローディング） / 'manual'（🔄ボタン） / 'silent'（復帰時の静かな更新）
+    async function loadTasks(modeArg = 'initial') {
+      const mode = modeArg === true ? 'manual' : (modeArg === false ? 'initial' : modeArg);
+      lastLoadedAt = Date.now(); // 取得中の二重起動を防ぐ
       const refreshBtn = document.getElementById('refreshBtn');
-      if (isManualRefresh) {
+      if (mode === 'manual') {
         refreshBtn.classList.add('spinning');
-      } else {
+      } else if (mode === 'initial') {
         showLoading('タスクを取得中...');
       }
 
@@ -940,15 +951,29 @@
         const res = await callGAS({ action: 'getTasks' });
         if (res.tasks) {
           applyServerTasks(res.tasks);
-          if (isManualRefresh) showToast('最新のタスクに更新しました');
+          lastLoadedAt = Date.now();
+          if (mode === 'manual') showToast('最新のタスクに更新しました');
         }
       } catch (err) {
-        showToast(err.message || 'タスクの取得に失敗しました', true);
+        if (mode !== 'silent') showToast(err.message || 'タスクの取得に失敗しました', true);
       } finally {
         hideLoading();
         refreshBtn.classList.remove('spinning');
       }
     }
+
+    // アプリが前面に戻ったら自動で取り直す（家族が足した分を反映）。直近15秒以内なら省略
+    function refreshIfStale() {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastLoadedAt < 15000) return;
+      if (pendingComplete.size > 0) return; // 完了待ち中は表示を乱さない
+      loadTasks('silent');
+    }
+    document.addEventListener('visibilitychange', refreshIfStale);
+    window.addEventListener('pageshow', refreshIfStale);
+    window.addEventListener('focus', refreshIfStale);
+    // 開きっぱなしでも1分ごとに取り直す
+    setInterval(refreshIfStale, 60000);
 
     // ==========================================
     // タブ切り替え

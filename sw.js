@@ -1,8 +1,9 @@
-const CACHE_NAME = 'task-pwa-v6';
+const CACHE_NAME = 'task-pwa-v7';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  './manifest-wife.json',
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png',
