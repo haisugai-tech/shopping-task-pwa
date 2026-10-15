@@ -745,6 +745,8 @@
     // ==========================================
     async function callGAS(payload) {
       try {
+        // 奥様モードはGAS側で「全部買い物に入れる」判定に使う
+        payload.mode = isWifeMode ? 'wife' : 'all';
         const response = await fetch(GAS_URL, {
           method: 'POST',
           headers: {
@@ -1075,10 +1077,26 @@
 
         handleVoiceSuccess(res);
       } catch (err) {
-        showToast(err.message || '音声解析に失敗しました', true);
+        await handleSubmitFailure(err, '音声解析に失敗しました');
       } finally {
         resetMicUI();
         hideLoading();
+      }
+    }
+
+    // 送信失敗時の共通処理
+    // iOSは通信が途中で切れると "Load failed" を出すが、GAS側では処理が完了していることが多い。
+    // 再送すると二重登録になるので、少し待ってから一覧を取り直して実際の状態を見せる。
+    async function handleSubmitFailure(err, fallbackMsg) {
+      const msg = (err && err.message) || '';
+      const isNetworkCut = /load failed|failed to fetch|network/i.test(msg);
+      if (isNetworkCut) {
+        showLoading('通信が切れました。登録結果を確認中...');
+        await new Promise(r => setTimeout(r, 4000));
+        try { await loadTasks(true); } catch (e) {}
+        showToast('通信が切れましたが、登録済みの可能性があります。一覧を確認してから再送してください', true);
+      } else {
+        showToast(msg || fallbackMsg, true);
       }
     }
 
@@ -1106,7 +1124,7 @@
         input.value = '';
         handleVoiceSuccess(res);
       } catch (err) {
-        showToast(err.message || '追加に失敗しました', true);
+        await handleSubmitFailure(err, '追加に失敗しました');
       } finally {
         addBtn.disabled = false;
         hideLoading();
