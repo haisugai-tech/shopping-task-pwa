@@ -71,6 +71,8 @@
   .bdlist{margin:6px 0 8px;border-top:1px solid var(--line)}
   .bdrow{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px solid var(--line)}
   .bdrow b{font-weight:700}
+  .fixrow{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .fixbtn{border:1px solid var(--accent);background:var(--card);color:var(--accent);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700}
 
   /* charts */
   svg{width:100%;height:auto;display:block}
@@ -448,14 +450,17 @@ function drawWeight(ws) {
 }
 
 // ---------- 記録：共通 ----------
+let LAST_ID = null, CORRECT_MODE = false;
 function onLogged(j, label) {
-  SUMMARY.today = j.today;
+  SUMMARY.today = j.today; LAST_ID = j.id; CORRECT_MODE = false;
   // refresh in background for full summary
   refresh().catch(() => {});
   const r = j.record;
   const head = `${r.meal} ${r.items} 約${r.kcal}kcal`;
   const bd = (r.breakdown || []).map(b => `<div class="bdrow"><span>${esc(b.name)}</span><b>${esc(b.kcal)}</b></div>`).join('');
-  $('lastComment').innerHTML = `<div class="comment"><div class="who">記録したよ：${esc(head)}</div>${bd ? `<div class="bdlist">${bd}</div>` : ''}${esc(j.comment || '')}${r.transcript ? `<div class="muted" style="margin-top:6px">聞き取り：「${esc(r.transcript)}」</div>` : ''}</div>`;
+  const title = j.corrected ? '直したよ：' : '記録したよ：';
+  $('lastComment').innerHTML = `<div class="comment"><div class="who">${title}${esc(head)}</div>${bd ? `<div class="bdlist">${bd}</div>` : ''}${esc(j.comment || '')}${r.transcript ? `<div class="muted" style="margin-top:6px">聞き取り：「${esc(r.transcript)}」</div>` : ''}<div class="fixrow"><button class="fixbtn" id="fixBtn">✏️ この記録を直す</button><span class="muted">例：大根じゃなくてきのこ／サラダもあった／ご飯は80g</span></div></div>`;
+  $('fixBtn').onclick = () => { CORRECT_MODE = true; const ti = $('textInput'); ti.placeholder = '直したいことを書いて送る'; ti.focus(); toast('次に送った文字で、この記録を直すよ'); };
   toast('記録した');
 }
 async function submitMeal(payload, label) {
@@ -469,7 +474,17 @@ async function delLog(id) {
 }
 
 // ---------- 文字 ----------
-$('textForm').onsubmit = e => { e.preventDefault(); const v = $('textInput').value.trim(); if (!v) return; $('textInput').value = ''; submitMeal({ text: v }, '解析中：' + v); };
+const CORRECT_RE = /じゃなくて|じゃない|ではなく|違う|ちがう|さっきの|今の|いまの|直して|なおして|修正|間違|まちがい|もあった|はなかった|入ってない|抜けてる|多かった|少なかった|大盛|小盛/;
+$('textForm').onsubmit = e => {
+  e.preventDefault(); const v = $('textInput').value.trim(); if (!v) return; $('textInput').value = ''; $('textInput').placeholder = '文字でも。例：昼にラーメン / ごはんは80g';
+  if (LAST_ID && (CORRECT_MODE || CORRECT_RE.test(v))) { CORRECT_MODE = false; submitCorrection(v); return; }
+  submitMeal({ text: v }, '解析中：' + v);
+};
+async function submitCorrection(text) {
+  const pid = addPending('直してる：' + text);
+  try { const j = await api({ action: 'correctLog', id: LAST_ID, text }); rmPending(pid); j.corrected = true; onLogged(j); }
+  catch (e) { rmPending(pid); toast(e.message || '直せなかった', true); }
+}
 
 // ---------- 写真 ----------
 $('photoBtn').onclick = () => $('photoInput').click();
