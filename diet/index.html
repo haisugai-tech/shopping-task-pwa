@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1b1f24">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="きろく">
+<title>きろく</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --bg:#f4f4f1; --card:#fff; --ink:#1b1f24; --sub:#6b7079; --line:#e4e4df;
+    --accent:#2f6f5e; --accent-ink:#fff; --warn:#c2552f; --ok:#2f6f5e; --soft:#edf3f0;
+    --tab-h:64px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#15181c; --card:#1f2329; --ink:#f1f1ec; --sub:#9aa0a8; --line:#2c3138; --soft:#223029; }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:16px;line-height:1.5}
+  body{padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom))}
+  header{padding:calc(14px + env(safe-area-inset-top)) 18px 10px;display:flex;align-items:baseline;justify-content:space-between}
+  header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.02em}
+  header .who{font-size:13px;color:var(--sub)}
+  main{padding:0 14px 20px}
+  .view{display:none}.view.active{display:block}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+  .big{font-size:44px;font-weight:800;letter-spacing:-.02em;line-height:1}
+  .big small{font-size:16px;font-weight:600;color:var(--sub);margin-left:4px}
+  .label{font-size:12px;color:var(--sub);text-transform:uppercase;letter-spacing:.08em}
+  .row{display:flex;gap:10px;align-items:center}
+  .grow{flex:1}
+  .muted{color:var(--sub);font-size:13px}
+  .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--soft);color:var(--accent)}
+  .pill.warn{background:#f8e9e2;color:var(--warn)}
+  .bar{height:10px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:10px}
+  .bar i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .4s}
+  .bar i.over{background:var(--warn)}
+
+  /* actions */
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+  .act{border:none;border-radius:16px;padding:18px 10px;font-size:16px;font-weight:700;color:var(--accent-ink);background:var(--accent);display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+  .act span.ic{font-size:28px;line-height:1}
+  .act.secondary{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+  .act.recording{background:var(--warn);animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+  .textrow{display:flex;gap:8px}
+  .textrow input{flex:1;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;background:var(--card);color:var(--ink)}
+  .textrow button{border:none;border-radius:12px;padding:0 16px;background:var(--ink);color:var(--bg);font-weight:700;font-size:15px}
+  #voiceStatus{font-size:13px;color:var(--sub);min-height:18px;margin-top:6px;text-align:center}
+
+  /* list */
+  .item{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line);align-items:flex-start}
+  .item:first-child{border-top:none}
+  .item .t{font-size:12px;color:var(--sub);width:42px;flex:none;padding-top:2px}
+  .item .n{flex:1}
+  .item .n b{font-weight:600}
+  .item .k{font-weight:700;flex:none}
+  .item .meal{font-size:11px;color:var(--sub);margin-right:6px}
+  .item .del{border:none;background:none;color:var(--sub);font-size:18px;padding:0 4px;cursor:pointer}
+  .pending{display:flex;gap:10px;align-items:center;padding:12px;border-radius:12px;background:var(--soft);margin-bottom:10px;font-size:14px}
+  .spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:rot .8s linear infinite;flex:none}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  .comment{background:var(--soft);border-radius:12px;padding:12px 14px;font-size:15px;margin-top:10px}
+  .comment .who{font-size:11px;color:var(--accent);font-weight:700;margin-bottom:2px}
+
+  /* charts */
+  svg{width:100%;height:auto;display:block}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--sub);margin-top:6px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
+  .daylist details{border-top:1px solid var(--line);padding:8px 0}
+  .daylist summary{display:flex;justify-content:space-between;cursor:pointer;list-style:none;font-size:15px}
+  .daylist summary::-webkit-details-marker{display:none}
+  .daylist .d{color:var(--sub)}
+  .daylist .plus{color:var(--warn);font-weight:700}
+  .daylist .minus{color:var(--ok);font-weight:700}
+  .wrow{display:flex;gap:8px;margin-top:10px}
+  .wrow input{flex:1;min-width:0;width:0;border:1px solid var(--line);border-radius:12px;padding:12px 8px;font-size:17px;text-align:center;background:var(--card);color:var(--ink)}
+  .wrow button{flex:none;border:none;border-radius:12px;padding:0 16px;background:var(--accent);color:#fff;font-weight:700;white-space:nowrap}
+
+  /* chat */
+  .chatlog{display:flex;flex-direction:column;gap:8px;min-height:40vh}
+  .msg{max-width:84%;padding:10px 14px;border-radius:16px;font-size:15px;white-space:pre-wrap}
+  .msg.u{align-self:flex-end;background:var(--ink);color:var(--bg);border-bottom-right-radius:4px}
+  .msg.a{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:4px}
+  .chatin{position:sticky;bottom:calc(var(--tab-h) + env(safe-area-inset-bottom) + 8px);display:flex;gap:8px;margin-top:12px}
+  .chatin input{flex:1;border:1px solid var(--line);border-radius:999px;padding:12px 16px;font-size:16px;background:var(--card);color:var(--ink)}
+  .chatin button{border:none;border-radius:999px;width:46px;background:var(--accent);color:#fff;font-size:18px}
+  .quick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .quick button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:13px}
+
+  /* tabs */
+  nav{position:fixed;left:0;right:0;bottom:0;height:calc(var(--tab-h) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--card);border-top:1px solid var(--line);display:flex}
+  nav button{flex:1;border:none;background:none;color:var(--sub);font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+  nav button span{font-size:22px}
+  nav button.on{color:var(--accent)}
+
+  /* setup */
+  #setup{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;justify-content:center;padding:30px;gap:12px}
+  #setup.show{display:flex}
+  #setup input{border:1px solid var(--line);border-radius:12px;padding:14px;font-size:18px;background:var(--card);color:var(--ink)}
+  #setup button{border:none;border-radius:12px;padding:14px;background:var(--accent);color:#fff;font-size:17px;font-weight:700}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tab-h) + 20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+  .toast.show{opacity:1}
+  .toast.err{background:var(--warn);color:#fff}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <h2 style="margin:0 0 4px">はじめまして</h2>
+  <p class="muted" style="margin:0 0 10px">最初に一回だけ、名前と合言葉を入れてね。</p>
+  <input id="suUser" placeholder="名前（ina / wife / daughter）" autocapitalize="none" autocomplete="off">
+  <input id="suToken" placeholder="合言葉" autocapitalize="none" autocomplete="off">
+  <button id="suBtn">はじめる</button>
+  <p id="suMsg" class="muted"></p>
+</div>
+
+<header>
+  <h1>きろく</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<main>
+  <!-- ========== 記録 ========== -->
+  <section id="v-home" class="view active">
+    <div class="card" id="todayCard">
+      <div class="label">今日</div>
+      <div class="row" style="margin-top:6px">
+        <div class="grow">
+          <div class="big" id="todayMain">–</div>
+          <div class="muted" id="todaySub"></div>
+        </div>
+        <div id="todayPill"></div>
+      </div>
+      <div class="bar"><i id="todayBar" style="width:0%"></i></div>
+    </div>
+
+    <div class="actions">
+      <button class="act" id="photoBtn"><span class="ic">📷</span>写真で記録</button>
+      <button class="act secondary" id="micBtn"><span class="ic">🎤</span>話して記録</button>
+    </div>
+    <input type="file" id="photoInput" accept="image/*" capture="environment" class="hidden">
+    <div id="voiceStatus"></div>
+
+    <form class="textrow" id="textForm" style="margin-top:8px">
+      <input id="textInput" placeholder="文字でも。例：昼にラーメン / ごはんは80g" autocomplete="off">
+      <button type="submit">送る</button>
+    </form>
+    <p class="muted" style="margin:8px 2px 14px">写真だけでもOK。ひとこと足すと精度が上がるよ（「ピーナッツバター」「大盛り」など）。あとから「昼はカレーだった」でも大丈夫。</p>
+
+    <div id="pendingArea"></div>
+    <div id="lastComment"></div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="label">今日食べたもの</div>
+      <div id="todayList" style="margin-top:8px"><div class="muted">まだ記録がないよ</div></div>
+    </div>
+  </section>
+
+  <!-- ========== 推移 ========== -->
+  <section id="v-trend" class="view">
+    <div class="card">
+      <div class="label">この7日</div>
+      <div class="row" style="margin-top:6px">
+        <div class="grow"><div class="big" id="weekMain">–</div><div class="muted" id="weekSub"></div></div>
+      </div>
+      <div id="kcalChart" style="margin-top:12px"></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>食べた分</span><span><i style="background:var(--warn)"></i>多め</span><span><i style="background:var(--sub);height:2px"></i>目安</span></div>
+    </div>
+
+    <div class="card">
+      <div class="label">体重</div>
+      <div class="row" style="margin-top:6px">
+        <div class="grow"><div class="big" id="wMain">–</div><div class="muted" id="wSub"></div></div>
+      </div>
+      <div id="wChart" style="margin-top:12px"></div>
+      <div class="legend"><span><i style="background:var(--line)"></i>毎日</span><span><i style="background:var(--accent);height:3px"></i>7日平均</span></div>
+      <div class="wrow">
+        <input id="wIn" type="number" step="0.1" inputmode="decimal" placeholder="体重 kg">
+        <input id="fIn" type="number" step="0.1" inputmode="decimal" placeholder="体脂肪%">
+        <button id="wBtn">記録</button>
+      </div>
+    </div>
+
+    <div class="card daylist">
+      <div class="label">日ごと（タップで中身）</div>
+      <div id="dayList" style="margin-top:6px"></div>
+    </div>
+  </section>
+
+  <!-- ========== 相談 ========== -->
+  <section id="v-chat" class="view">
+    <div class="quick">
+      <button data-q="なんか食べたい！">なんか食べたい！</button>
+      <button data-q="今日の調子どう？">今日の調子どう？</button>
+      <button data-q="コンビニで何ならいい？">コンビニで何ならいい？</button>
+      <button data-q="やらかした…">やらかした…</button>
+    </div>
+    <div class="chatlog" id="chatLog"></div>
+    <form class="chatin" id="chatForm">
+      <input id="chatInput" placeholder="相談・報告・ぼやき、なんでも" autocomplete="off">
+      <button type="submit">↑</button>
+    </form>
+  </section>
+</main>
+
+<nav>
+  <button class="on" data-v="home"><span>🍽</span>記録</button>
+  <button data-v="trend"><span>📈</span>推移</button>
+  <button data-v="chat"><span>💬</span>相談</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyjr626gW5Li7oNB3F03fsXjWZSZLEj6B4zOUS2xffEtWMCk2VwDIXKc8p8jiHVeVSKEw/exec";
+
+// ---------- 設定（localStorage） ----------
+const LS = { u:'fd_user', t:'fd_token', chat:'fd_chat' };
+let USER = localStorage.getItem(LS.u) || '';
+let TOKEN = localStorage.getItem(LS.t) || '';
+(function fromQuery(){
+  const q = new URLSearchParams(location.search);
+  if (q.get('u') && q.get('t')) {
+    USER = q.get('u'); TOKEN = q.get('t');
+    localStorage.setItem(LS.u, USER); localStorage.setItem(LS.t, TOKEN);
+    history.replaceState(null, '', location.pathname);
+  }
+})();
+
+let SUMMARY = null;
+let SHOW_NUM = true;
+
+// ---------- API ----------
+async function api(body) {
+  const res = await fetch(GAS_URL, { method:'POST', body: JSON.stringify(Object.assign({ user_id: USER, token: TOKEN }, body)), headers: { 'Content-Type': 'text/plain' } });
+  const txt = await res.text();
+  let j; try { j = JSON.parse(txt); } catch (e) { throw new Error('サーバーの返事が読めない'); }
+  if (!j.ok) throw new Error(j.error || 'エラー');
+  return j;
+}
+
+// ---------- UI helpers ----------
+const $ = id => document.getElementById(id);
+function toast(msg, err) { const t = $('toast'); t.innerText = msg; t.className = 'toast show' + (err ? ' err' : ''); clearTimeout(t._h); t._h = setTimeout(() => t.className = 'toast', 3200); }
+let pseq = 0;
+function addPending(label) { const id = 'p' + (++pseq); const el = document.createElement('div'); el.className = 'pending'; el.id = id; el.innerHTML = '<div class="spin"></div><div></div>'; el.lastChild.innerText = label; $('pendingArea').prepend(el); return id; }
+function rmPending(id) { const el = $(id); if (el) el.remove(); }
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+function showView(v) {
+  document.querySelectorAll('.view').forEach(x => x.classList.toggle('active', x.id === 'v-' + v));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  if (v === 'chat') { renderChat(); setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 50); }
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => showView(b.dataset.v));
+
+// ---------- 初期設定 ----------
+async function boot() {
+  if (!USER || !TOKEN) { $('setup').classList.add('show'); return; }
+  try {
+    await refresh();
+    $('setup').classList.remove('show');
+  } catch (e) {
+    $('setup').classList.add('show');
+    $('suMsg').innerText = e.message;
+  }
+}
+$('suBtn').onclick = async () => {
+  USER = $('suUser').value.trim(); TOKEN = $('suToken').value.trim();
+  if (!USER || !TOKEN) return;
+  $('suMsg').innerText = '確認中…';
+  try {
+    await api({ action: 'ping' });
+    localStorage.setItem(LS.u, USER); localStorage.setItem(LS.t, TOKEN);
+    $('suMsg').innerText = '';
+    $('setup').classList.remove('show');
+    await refresh();
+  } catch (e) { $('suMsg').innerText = e.message; }
+};
+
+// ---------- サマリー取得・描画 ----------
+async function refresh() {
+  const j = await api({ action: 'summary', days: 14 });
+  SUMMARY = j; SHOW_NUM = !!j.profile.show_numbers;
+  render();
+}
+function render() {
+  const s = SUMMARY; if (!s) return;
+  $('who').innerText = s.profile.name;
+  const t = s.today;
+  const ratio = Math.min(1.15, t.kcal / t.target);
+  $('todayBar').style.width = Math.min(100, ratio * 100) + '%';
+  $('todayBar').className = t.kcal > t.target ? 'over' : '';
+  if (SHOW_NUM) {
+    $('todayMain').innerHTML = esc(t.kcal) + '<small>kcal</small>';
+    $('todaySub').innerText = t.remain_kcal >= 0 ? `あと ${t.remain_kcal} kcal（目安 ${t.target}）・たんぱく質 ${t.protein_g}g` : `${-t.remain_kcal} kcal オーバー（目安 ${t.target}）`;
+    $('todayPill').innerHTML = t.remain_kcal >= 0 ? '<span class="pill">いい感じ</span>' : '<span class="pill warn">多め</span>';
+  } else {
+    const st = t.kcal === 0 ? '–' : (t.kcal <= t.target ? 'OK' : 'ちょっと多め');
+    $('todayMain').innerText = st;
+    $('todaySub').innerText = t.items.length ? `${t.items.length}回 記録した` : '今日はまだ';
+    $('todayPill').innerHTML = '';
+  }
+  // today list
+  const L = $('todayList');
+  if (!t.items.length) L.innerHTML = '<div class="muted">まだ記録がないよ</div>';
+  else L.innerHTML = t.items.map(i => `<div class="item"><div class="t">${esc(i.time)}</div><div class="n"><span class="meal">${esc(i.meal)}</span><b>${esc(i.items)}</b></div>${SHOW_NUM ? `<div class="k">${esc(i.kcal)}</div>` : ''}<button class="del" data-id="${esc(i.id)}" title="取り消す">×</button></div>`).join('');
+  L.querySelectorAll('.del').forEach(b => b.onclick = () => delLog(b.dataset.id));
+
+  // week
+  const w = s.week;
+  if (SHOW_NUM) {
+    const sign = w.diff_kcal > 0 ? '+' : '';
+    $('weekMain').innerHTML = `${sign}${w.diff_kcal}<small>kcal</small>`;
+    $('weekMain').style.color = w.diff_kcal > 0 ? 'var(--warn)' : 'var(--ok)';
+    $('weekSub').innerText = w.logged_days ? `${w.logged_days}日分・目安との差の合計 ≒ 脂肪 ${w.fat_kg_equiv > 0 ? '+' : ''}${w.fat_kg_equiv}kg 相当` : 'まだ記録がないよ';
+  } else {
+    const okDays = s.daily.slice(-7).filter(d => d.logged && d.kcal <= d.target).length;
+    $('weekMain').innerText = w.logged_days ? `${okDays}/${w.logged_days}日 OK` : '–';
+    $('weekMain').style.color = '';
+    $('weekSub').innerText = '記録した日のうち、OKだった日';
+  }
+  drawKcal(s.daily.slice(-7));
+  // weight
+  const lw = s.latest_weight;
+  if (lw) {
+    $('wMain').innerHTML = SHOW_NUM ? `${lw.weight_kg}<small>kg</small>` : `${lw.avg7}<small>kg（7日平均）</small>`;
+    const first = s.weights[0];
+    const d = Math.round((lw.avg7 - (first ? first.avg7 : lw.avg7)) * 10) / 10;
+    $('wSub').innerText = SHOW_NUM ? `7日平均 ${lw.avg7}kg・開始から ${d > 0 ? '+' : ''}${d}kg${s.profile.goal_weight ? `・目標 ${s.profile.goal_weight}kg` : ''}` : `始めた頃から ${d > 0 ? '+' : ''}${d}kg`;
+  } else { $('wMain').innerText = '–'; $('wSub').innerText = '朝いちで体重を入れてね'; }
+  drawWeight(s.weights.slice(-30));
+  // day list
+  $('dayList').innerHTML = s.daily.slice().reverse().filter(d => d.logged).map(d => {
+    const diff = d.diff;
+    const right = SHOW_NUM ? `<span>${d.kcal} <span class="${diff > 0 ? 'plus' : 'minus'}">${diff > 0 ? '+' : ''}${diff}</span></span>` : `<span class="${diff > 0 ? 'plus' : 'minus'}">${diff > 0 ? 'ちょっと多め' : 'OK'}</span>`;
+    const items = d.items.map(i => `<div class="item"><div class="t">${esc(i.time)}</div><div class="n"><span class="meal">${esc(i.meal)}</span>${esc(i.items)}</div>${SHOW_NUM ? `<div class="k">${esc(i.kcal)}</div>` : ''}</div>`).join('');
+    return `<details><summary><span class="d">${d.date.slice(5).replace('-', '/')}</span>${right}</summary><div style="margin-top:6px">${items}</div></details>`;
+  }).join('') || '<div class="muted">まだ記録がないよ</div>';
+}
+
+// ---------- charts (inline SVG) ----------
+function drawKcal(days) {
+  const W = 320, H = 140, pad = { l: 6, r: 6, t: 10, b: 22 };
+  const target = days[0] ? days[0].target : 1600;
+  const max = Math.max(target * 1.2, ...days.map(d => d.kcal)) || 1;
+  const bw = (W - pad.l - pad.r) / days.length;
+  const y = v => pad.t + (H - pad.t - pad.b) * (1 - v / max);
+  let svg = `<svg viewBox="0 0 ${W} ${H}">`;
+  svg += `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(target)}" y2="${y(target)}" stroke="var(--sub)" stroke-dasharray="3 3" stroke-width="1"/>`;
+  days.forEach((d, i) => {
+    const x = pad.l + i * bw + bw * 0.18, w = bw * 0.64;
+    const h = d.logged ? Math.max(2, y(0) - y(d.kcal)) : 0;
+    const col = d.kcal > target ? 'var(--warn)' : 'var(--accent)';
+    if (d.logged) svg += `<rect x="${x}" y="${y(d.kcal)}" width="${w}" height="${h}" rx="4" fill="${col}"/>`;
+    else svg += `<rect x="${x}" y="${y(0) - 2}" width="${w}" height="2" rx="1" fill="var(--line)"/>`;
+    const lbl = d.date.slice(8).replace(/^0/, '');
+    svg += `<text x="${x + w / 2}" y="${H - 6}" font-size="10" text-anchor="middle" fill="var(--sub)">${lbl}</text>`;
+    if (SHOW_NUM && d.logged) svg += `<text x="${x + w / 2}" y="${y(d.kcal) - 3}" font-size="9" text-anchor="middle" fill="var(--sub)">${d.kcal}</text>`;
+  });
+  svg += '</svg>';
+  $('kcalChart').innerHTML = svg;
+}
+function drawWeight(ws) {
+  if (!ws.length) { $('wChart').innerHTML = '<div class="muted">記録が増えると線が出るよ</div>'; return; }
+  const W = 320, H = 140, pad = { l: 30, r: 8, t: 10, b: 20 };
+  const vals = ws.flatMap(w => [w.weight_kg, w.avg7]);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (hi - lo < 1.5) { const m = (hi + lo) / 2; lo = m - 0.75; hi = m + 0.75; }
+  lo = Math.floor(lo * 2) / 2 - 0.25; hi = Math.ceil(hi * 2) / 2 + 0.25;
+  const x = i => pad.l + (W - pad.l - pad.r) * (ws.length === 1 ? 0.5 : i / (ws.length - 1));
+  const y = v => pad.t + (H - pad.t - pad.b) * (1 - (v - lo) / (hi - lo));
+  let svg = `<svg viewBox="0 0 ${W} ${H}">`;
+  for (let g = Math.ceil(lo); g <= hi; g++) svg += `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(g)}" y2="${y(g)}" stroke="var(--line)" stroke-width="1"/><text x="${pad.l - 4}" y="${y(g) + 3}" font-size="9" text-anchor="end" fill="var(--sub)">${g}</text>`;
+  if (SHOW_NUM) {
+    svg += `<polyline fill="none" stroke="var(--line)" stroke-width="1.5" points="${ws.map((w, i) => x(i) + ',' + y(w.weight_kg)).join(' ')}"/>`;
+    ws.forEach((w, i) => svg += `<circle cx="${x(i)}" cy="${y(w.weight_kg)}" r="2.2" fill="var(--sub)"/>`);
+  }
+  svg += `<polyline fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points="${ws.map((w, i) => x(i) + ',' + y(w.avg7)).join(' ')}"/>`;
+  const step = Math.max(1, Math.round(ws.length / 5));
+  ws.forEach((w, i) => { if (i % step === 0 || i === ws.length - 1) svg += `<text x="${x(i)}" y="${H - 5}" font-size="9" text-anchor="middle" fill="var(--sub)">${w.date.slice(5).replace('-', '/')}</text>`; });
+  svg += '</svg>';
+  $('wChart').innerHTML = svg;
+}
+
+// ---------- 記録：共通 ----------
+function onLogged(j, label) {
+  SUMMARY.today = j.today;
+  // refresh in background for full summary
+  refresh().catch(() => {});
+  const r = j.record;
+  const head = SHOW_NUM ? `${r.meal} ${r.items} 約${r.kcal}kcal` : `${r.meal} ${r.items}`;
+  $('lastComment').innerHTML = `<div class="comment"><div class="who">記録したよ：${esc(head)}</div>${esc(j.comment || '')}${r.transcript ? `<div class="muted" style="margin-top:6px">聞き取り：「${esc(r.transcript)}」</div>` : ''}</div>`;
+  toast('記録した');
+}
+async function submitMeal(payload, label) {
+  const pid = addPending(label);
+  try { const j = await api(Object.assign({ action: 'logMeal' }, payload)); rmPending(pid); onLogged(j); }
+  catch (e) { rmPending(pid); toast(e.message || '記録に失敗', true); }
+}
+async function delLog(id) {
+  if (!confirm('この記録を取り消す？')) return;
+  try { const j = await api({ action: 'deleteLog', id }); SUMMARY = Object.assign(SUMMARY, j.summary); render(); toast('取り消した'); } catch (e) { toast(e.message, true); }
+}
+
+// ---------- 文字 ----------
+$('textForm').onsubmit = e => { e.preventDefault(); const v = $('textInput').value.trim(); if (!v) return; $('textInput').value = ''; submitMeal({ text: v }, '解析中：' + v); };
+
+// ---------- 写真 ----------
+$('photoBtn').onclick = () => $('photoInput').click();
+$('photoInput').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return; e.target.value = '';
+  const note = $('textInput').value.trim(); $('textInput').value = '';
+  const pid = addPending('写真を縮小中…');
+  try {
+    const b64 = await shrinkImage(f, 1024, 0.82);
+    rmPending(pid);
+    submitMeal({ imageBase64: b64, imageMime: 'image/jpeg', text: note || undefined }, '写真を解析中' + (note ? '：' + note : ''));
+  } catch (err) { rmPending(pid); toast('写真の読み込みに失敗', true); }
+};
+function shrinkImage(file, maxSide, q) {
+  return new Promise((res, rej) => {
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let w = img.width, h = img.height; const sc = Math.min(1, maxSide / Math.max(w, h)); w = Math.round(w * sc); h = Math.round(h * sc);
+      const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg', q).split(',')[1]);
+    };
+    img.onerror = rej; img.src = url;
+  });
+}
+
+// ---------- 音声（MediaRecorder, iOS対応, 無音で自動送信） ----------
+let mediaRecorder = null, chunks = [], isRec = false, audioCtx = null, silenceTimer = null, discard = false;
+const SILENCE_MS = 4000, NO_SPEECH_MS = 10000, RMS = 0.015;
+$('micBtn').onclick = () => isRec ? stopRec() : startRec();
+async function startRec() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('この環境ではマイクが使えない。文字で入れてね', true); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    chunks = []; discard = false;
+    let mime = '';
+    if (window.MediaRecorder) { for (const m of ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']) if (MediaRecorder.isTypeSupported(m)) { mime = m; break; } }
+    mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
+    mediaRecorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop()); stopSilence();
+      resetMic();
+      if (discard) { discard = false; return; }
+      const actual = mediaRecorder.mimeType || mime || 'audio/mp4';
+      const blob = new Blob(chunks, { type: actual });
+      const b64 = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(',')[1]); fr.readAsDataURL(blob); });
+      const note = $('textInput').value.trim(); $('textInput').value = '';
+      submitMeal({ audioBase64: b64, audioMime: actual.split(';')[0], text: note || undefined }, '声を解析中…');
+    };
+    mediaRecorder.start(); isRec = true;
+    $('micBtn').classList.add('recording'); $('micBtn').innerHTML = '<span class="ic">⏹</span>タップで送信';
+    $('voiceStatus').innerText = '🔴 聞いてるよ。4秒黙ると自動で送る';
+    startSilence(stream);
+  } catch (e) { toast('マイクが許可されていない。設定で許可してね', true); }
+}
+function stopRec() { if (!isRec) return; isRec = false; stopSilence(); if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); }
+function resetMic() { isRec = false; $('micBtn').classList.remove('recording'); $('micBtn').innerHTML = '<span class="ic">🎤</span>話して記録'; $('voiceStatus').innerText = ''; }
+function startSilence(stream) {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume();
+    const an = audioCtx.createAnalyser(); an.fftSize = 1024; audioCtx.createMediaStreamSource(stream).connect(an);
+    const buf = new Float32Array(an.fftSize); const t0 = Date.now(); let last = 0, spoke = false;
+    silenceTimer = setInterval(() => {
+      an.getFloatTimeDomainData(buf); let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+      const rms = Math.sqrt(s / buf.length), now = Date.now();
+      if (rms > RMS) { spoke = true; last = now; $('voiceStatus').innerText = '🔴 聞いてるよ…'; }
+      else if (spoke) { const left = Math.ceil((SILENCE_MS - (now - last)) / 1000); if (left <= 0) { stopRec(); return; } $('voiceStatus').innerText = `🔴 あと${left}秒で送る（続けて話せる）`; }
+      else if (now - t0 > NO_SPEECH_MS) { discard = true; stopRec(); toast('声が聞こえなかったので取り消し', true); }
+    }, 200);
+  } catch (e) {}
+}
+function stopSilence() { clearInterval(silenceTimer); silenceTimer = null; if (audioCtx) { try { audioCtx.close(); } catch (e) {} audioCtx = null; } }
+
+// ---------- 体重 ----------
+$('wBtn').onclick = async () => {
+  const w = parseFloat($('wIn').value); if (!w) { toast('体重を入れてね', true); return; }
+  const f = $('fIn').value ? parseFloat($('fIn').value) : '';
+  $('wBtn').disabled = true;
+  try { const j = await api({ action: 'logWeight', weight_kg: w, fat_pct: f }); SUMMARY = Object.assign(SUMMARY, j.summary); render(); $('wIn').value = ''; $('fIn').value = ''; toast('体重を記録した'); }
+  catch (e) { toast(e.message, true); }
+  $('wBtn').disabled = false;
+};
+
+// ---------- 相談 ----------
+let CHAT = JSON.parse(localStorage.getItem(LS.chat) || '[]');
+function renderChat() {
+  const L = $('chatLog');
+  L.innerHTML = CHAT.slice(-30).map(m => `<div class="msg ${m.r === 'u' ? 'u' : 'a'}">${esc(m.t)}</div>`).join('') || '<div class="muted" style="text-align:center;padding:30px 0">「なんか食べたい！」とか「今日どう？」とか、気軽に。</div>';
+}
+async function sendChat(text) {
+  if (!text) return;
+  CHAT.push({ r: 'u', t: text }); renderChat(); window.scrollTo(0, document.body.scrollHeight);
+  const L = $('chatLog'); const th = document.createElement('div'); th.className = 'msg a'; th.innerHTML = '<div class="spin"></div>'; L.appendChild(th);
+  try {
+    const j = await api({ action: 'chat', message: text });
+    CHAT.push({ r: 'a', t: j.reply }); localStorage.setItem(LS.chat, JSON.stringify(CHAT.slice(-60)));
+    if (SUMMARY) SUMMARY.today = j.today;
+  } catch (e) { CHAT.push({ r: 'a', t: '（つながらなかった… ' + e.message + '）' }); }
+  renderChat(); window.scrollTo(0, document.body.scrollHeight);
+}
+$('chatForm').onsubmit = e => { e.preventDefault(); const v = $('chatInput').value.trim(); $('chatInput').value = ''; sendChat(v); };
+document.querySelectorAll('.quick button').forEach(b => b.onclick = () => sendChat(b.dataset.q));
+
+// ---------- SW ----------
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+boot();
+</script>
+</body>
+</html>
