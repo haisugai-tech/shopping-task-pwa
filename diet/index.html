@@ -13,113 +13,138 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
   :root{
-    --bg:#f4f4f1; --card:#fff; --ink:#1b1f24; --sub:#6b7079; --line:#e4e4df;
-    --accent:#2f6f5e; --accent-ink:#fff; --warn:#c2552f; --ok:#2f6f5e; --soft:#edf3f0;
-    --tab-h:64px;
+    --bg:#fff6f5; --card:#ffffff; --ink:#3b3031; --sub:#9a8a8c; --line:#f3dfe0;
+    --accent:#f08aa0; --accent-deep:#e0607e; --accent-ink:#fff; --soft:#fde9ed; --soft2:#fff1f3;
+    --warn:#e0607e; --ok:#5aa88a; --okbg:#e8f6ef;
+    --tab-h:64px; --r:22px;
   }
   @media (prefers-color-scheme: dark){
-    :root{ --bg:#15181c; --card:#1f2329; --ink:#f1f1ec; --sub:#9aa0a8; --line:#2c3138; --soft:#223029; }
+    :root{ --bg:#221a1c; --card:#2d2326; --ink:#f6eef0; --sub:#b19ea2; --line:#43343a; --soft:#4a2f37; --soft2:#3a2a2f; --okbg:#2b4238; }
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:16px;line-height:1.5}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif;font-size:16px;line-height:1.5}
   body{padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom))}
-  header{padding:calc(14px + env(safe-area-inset-top)) 18px 10px;display:flex;align-items:baseline;justify-content:space-between}
-  header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.02em}
+  header{padding:calc(14px + env(safe-area-inset-top)) 18px 8px;display:flex;align-items:baseline;justify-content:space-between}
+  header h1{font-size:24px;margin:0;font-weight:800;letter-spacing:.02em}
+  header h1::after{content:" ♡";color:var(--accent);font-size:18px}
   header .who{font-size:13px;color:var(--sub)}
   main{padding:0 14px 20px}
   .view{display:none}.view.active{display:block}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:0 4px 18px rgba(240,138,160,.08)}
   .big{font-size:44px;font-weight:800;letter-spacing:-.02em;line-height:1}
   .big small{font-size:16px;font-weight:600;color:var(--sub);margin-left:4px}
-  .label{font-size:12px;color:var(--sub);text-transform:uppercase;letter-spacing:.08em}
+  .label{font-size:12px;color:var(--sub);letter-spacing:.06em}
   .row{display:flex;gap:10px;align-items:center}
   .grow{flex:1}
   .muted{color:var(--sub);font-size:13px}
-  .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--soft);color:var(--accent)}
-  .pill.warn{background:#f8e9e2;color:var(--warn)}
-  .bar{height:10px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:10px}
-  .bar i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .4s}
+  .pill{display:inline-block;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;background:var(--soft);color:var(--accent-deep)}
+  .pill.warn{background:#fde2e2;color:#c94c5f}
+  .bar{height:10px;background:var(--soft2);border-radius:999px;overflow:hidden;margin-top:10px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#f7b2c0);border-radius:999px;transition:width .4s}
   .bar i.over{background:var(--warn)}
+
+  /* today ring */
+  .today{display:flex;align-items:center;gap:10px}
+  .ring{position:relative;width:150px;height:150px;flex:none}
+  .ring svg{width:150px;height:150px;transform:rotate(-90deg)}
+  .ring .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .ring .c .l{font-size:11px;color:var(--sub)}
+  .ring .c .v{font-size:38px;font-weight:800;line-height:1.05;color:var(--accent-deep)}
+  .ring .c .u{font-size:12px;color:var(--sub)}
+  .mascot{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .bubble{background:var(--soft);border-radius:16px;padding:8px 12px;font-size:13px;font-weight:700;color:var(--accent-deep);position:relative;text-align:center}
+  .bubble::after{content:"";position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--soft);border-bottom:0}
+  .mascot svg{width:92px;height:92px}
 
   /* actions */
   .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
-  .act{border:none;border-radius:16px;padding:18px 10px;font-size:16px;font-weight:700;color:var(--accent-ink);background:var(--accent);display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
-  .act span.ic{font-size:28px;line-height:1}
-  .act.secondary{background:var(--card);color:var(--ink);border:1px solid var(--line)}
-  .act.recording{background:var(--warn);animation:pulse 1s infinite}
+  .act{border:none;border-radius:var(--r);padding:18px 10px;font-size:16px;font-weight:800;color:var(--accent-deep);background:var(--soft);display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+  .act span.ic{font-size:30px;line-height:1}
+  .act.secondary{background:var(--card);border:1px solid var(--line);color:var(--ink)}
+  .act.recording{background:var(--warn);color:#fff;animation:pulse 1s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
   .textrow{display:flex;gap:8px}
-  .textrow input{flex:1;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;background:var(--card);color:var(--ink)}
-  .textrow button{border:none;border-radius:12px;padding:0 16px;background:var(--ink);color:var(--bg);font-weight:700;font-size:15px}
+  .textrow input{flex:1;border:1px solid var(--line);border-radius:999px;padding:12px 16px;font-size:16px;background:var(--card);color:var(--ink)}
+  .textrow button{border:none;border-radius:999px;width:46px;background:var(--accent);color:#fff;font-weight:800;font-size:18px}
   #voiceStatus{font-size:13px;color:var(--sub);min-height:18px;margin-top:6px;text-align:center}
 
   /* list */
-  .item{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line);align-items:flex-start}
+  .item{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line);align-items:center}
   .item:first-child{border-top:none}
-  .item .t{font-size:12px;color:var(--sub);width:42px;flex:none;padding-top:2px}
-  .item .n{flex:1}
-  .item .n b{font-weight:600}
-  .item .k{font-weight:700;flex:none}
+  .item .ico{width:40px;height:40px;border-radius:12px;background:var(--soft2);display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}
+  .item .t{font-size:11px;color:var(--sub)}
+  .item .n{flex:1;min-width:0}
+  .item .n b{font-weight:700}
+  .item .k{font-weight:800;flex:none;color:var(--accent-deep)}
+  .item .k::after{content:" kcal";font-size:11px;color:var(--sub);font-weight:600}
   .item .meal{font-size:11px;color:var(--sub);margin-right:6px}
   .item .bd{font-size:12px;color:var(--sub);margin-top:2px;line-height:1.4}
   .item .del{border:none;background:none;color:var(--sub);font-size:18px;padding:0 4px;cursor:pointer}
-  .pending{display:flex;gap:10px;align-items:center;padding:12px;border-radius:12px;background:var(--soft);margin-bottom:10px;font-size:14px}
+  .pending{display:flex;gap:10px;align-items:center;padding:12px;border-radius:16px;background:var(--soft);margin-bottom:10px;font-size:14px}
   .spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:rot .8s linear infinite;flex:none}
   @keyframes rot{to{transform:rotate(360deg)}}
-  .comment{background:var(--soft);border-radius:12px;padding:12px 14px;font-size:15px;margin-top:10px}
-  .comment .who{font-size:11px;color:var(--accent);font-weight:700;margin-bottom:2px}
+  .comment{background:var(--soft2);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;font-size:15px;margin-top:10px}
+  .comment .who{font-size:11px;color:var(--accent-deep);font-weight:800;margin-bottom:2px}
   .bdlist{margin:6px 0 8px;border-top:1px solid var(--line)}
   .bdrow{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px solid var(--line)}
-  .bdrow b{font-weight:700}
+  .bdrow b{font-weight:800;color:var(--accent-deep)}
   .fixrow{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
-  .fixbtn{border:1px solid var(--accent);background:var(--card);color:var(--accent);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700}
+  .fixbtn{border:1px solid var(--accent);background:var(--card);color:var(--accent-deep);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:800}
 
   /* charts */
   svg{width:100%;height:auto;display:block}
   .legend{display:flex;gap:14px;font-size:12px;color:var(--sub);margin-top:6px}
-  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:middle}
+  .seg{display:flex;background:var(--soft2);border-radius:999px;padding:3px;margin-bottom:12px}
+  .seg button{flex:1;border:none;background:none;border-radius:999px;padding:7px 0;font-size:13px;font-weight:700;color:var(--sub)}
+  .seg button.on{background:var(--accent);color:#fff}
   .daylist details{border-top:1px solid var(--line);padding:8px 0}
   .daylist summary{display:flex;justify-content:space-between;cursor:pointer;list-style:none;font-size:15px}
   .daylist summary::-webkit-details-marker{display:none}
   .daylist .d{color:var(--sub)}
-  .daylist .plus{color:var(--warn);font-weight:700}
-  .daylist .minus{color:var(--ok);font-weight:700}
+  .daylist .plus{color:var(--warn);font-weight:800}
+  .daylist .minus{color:var(--ok);font-weight:800}
   .wrow{display:flex;gap:8px;margin-top:10px}
-  .wrow input{flex:1;min-width:0;width:0;border:1px solid var(--line);border-radius:12px;padding:12px 8px;font-size:17px;text-align:center;background:var(--card);color:var(--ink)}
-  .wrow button{flex:none;border:none;border-radius:12px;padding:0 16px;background:var(--accent);color:#fff;font-weight:700;white-space:nowrap}
+  .wrow input{flex:1;min-width:0;width:0;border:1px solid var(--line);border-radius:14px;padding:12px 8px;font-size:17px;text-align:center;background:var(--card);color:var(--ink)}
+  .wrow button{flex:none;border:none;border-radius:14px;padding:0 16px;background:var(--accent);color:#fff;font-weight:800;white-space:nowrap}
 
   /* chat */
+  .chathead{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .chathead svg{width:64px;height:64px;flex:none}
+  .chathead .nm{font-weight:800;font-size:16px}
+  .chathead .st{font-size:12px;color:var(--ok)}
   .chatlog{display:flex;flex-direction:column;gap:8px;min-height:40vh}
-  .msg{max-width:84%;padding:10px 14px;border-radius:16px;font-size:15px;white-space:pre-wrap}
-  .msg.u{align-self:flex-end;background:var(--ink);color:var(--bg);border-bottom-right-radius:4px}
-  .msg.a{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:4px}
+  .msg{max-width:84%;padding:10px 14px;border-radius:18px;font-size:15px;white-space:pre-wrap;line-height:1.55}
+  .msg.u{align-self:flex-end;background:var(--accent-deep);color:#fff;border-bottom-right-radius:6px}
+  .msg.a{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:6px}
   .chatin{position:sticky;bottom:calc(var(--tab-h) + env(safe-area-inset-bottom) + 8px);display:flex;gap:8px;margin-top:12px}
   .chatin input{flex:1;border:1px solid var(--line);border-radius:999px;padding:12px 16px;font-size:16px;background:var(--card);color:var(--ink)}
   .chatin button{border:none;border-radius:999px;width:46px;background:var(--accent);color:#fff;font-size:18px}
   .quick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-  .quick button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:13px}
+  .quick button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600}
 
   /* settings */
   .field{margin-top:10px}
   .field label{display:block;font-size:12px;color:var(--sub);margin-bottom:4px}
-  .field input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:17px;background:var(--card);color:var(--ink)}
+  .field input{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px;font-size:17px;background:var(--card);color:var(--ink)}
   .field2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .ghost{margin-top:12px;width:100%;border:1px solid var(--line);background:var(--card);color:var(--accent);border-radius:12px;padding:12px;font-weight:700;font-size:14px}
+  .ghost{margin-top:12px;width:100%;border:1px solid var(--line);background:var(--card);color:var(--accent-deep);border-radius:999px;padding:12px;font-weight:800;font-size:14px}
 
   /* tabs */
   nav{position:fixed;left:0;right:0;bottom:0;height:calc(var(--tab-h) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--card);border-top:1px solid var(--line);display:flex}
-  nav button{flex:1;border:none;background:none;color:var(--sub);font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
-  nav button span{font-size:22px}
-  nav button.on{color:var(--accent)}
+  nav button{flex:1;border:none;background:none;color:var(--sub);font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+  nav button span{font-size:22px;filter:grayscale(1);opacity:.6}
+  nav button.on{color:var(--accent-deep)}
+  nav button.on span{filter:none;opacity:1}
 
   /* setup */
-  #setup{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;justify-content:center;padding:30px;gap:12px}
+  #setup{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;justify-content:center;padding:30px;gap:12px;z-index:10}
   #setup.show{display:flex}
-  #setup input{border:1px solid var(--line);border-radius:12px;padding:14px;font-size:18px;background:var(--card);color:var(--ink)}
-  #setup button{border:none;border-radius:12px;padding:14px;background:var(--accent);color:#fff;font-size:17px;font-weight:700}
-  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tab-h) + 20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+  #setup input{border:1px solid var(--line);border-radius:14px;padding:14px;font-size:18px;background:var(--card);color:var(--ink)}
+  #setup button{border:none;border-radius:999px;padding:14px;background:var(--accent);color:#fff;font-size:17px;font-weight:800}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tab-h) + 20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;z-index:20}
   .toast.show{opacity:1}
-  .toast.err{background:var(--warn);color:#fff}
+  .toast.err{background:var(--warn)}
   .hidden{display:none!important}
 </style>
 </head>
@@ -143,14 +168,14 @@
   <!-- ========== 記録 ========== -->
   <section id="v-home" class="view active">
     <div class="card" id="todayCard">
-      <div class="label">今日</div>
-      <div class="row" style="margin-top:6px">
-        <div class="grow">
-          <div class="big" id="todayMain">–</div>
-          <div class="muted" id="todaySub"></div>
+      <div class="today">
+        <div class="ring">
+          <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--soft2)" stroke-width="12"/><circle id="ringArc" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .6s"/></svg>
+          <div class="c"><div class="l">今日のカロリー</div><div class="v" id="todayMain">–</div><div class="u">kcal</div></div>
         </div>
-        <div id="todayPill"></div>
+        <div class="mascot"><div class="bubble" id="todayPill">今日も<br>いっしょに♪</div><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="54" r="38" fill="#ffd9df"/><ellipse cx="50" cy="30" rx="30" ry="14" fill="#8a5a4a"/><circle cx="26" cy="36" r="9" fill="#8a5a4a"/><circle cx="74" cy="36" r="9" fill="#8a5a4a"/><circle cx="38" cy="54" r="3.2" fill="#3b3031"/><circle cx="62" cy="54" r="3.2" fill="#3b3031"/><ellipse cx="30" cy="63" rx="6" ry="3.5" fill="#f7a8b8"/><ellipse cx="70" cy="63" rx="6" ry="3.5" fill="#f7a8b8"/><path d="M43 65 Q50 71 57 65" stroke="#3b3031" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M78 24 l2.5 5 5.5 .8 -4 3.9 .9 5.5 -4.9-2.6 -4.9 2.6 .9-5.5 -4-3.9 5.5-.8z" fill="#f08aa0"/></svg></div>
       </div>
+      <div class="muted" id="todaySub" style="margin-top:10px"></div>
       <div class="bar"><i id="todayBar" style="width:0%"></i></div>
     </div>
 
@@ -162,8 +187,8 @@
     <div id="voiceStatus"></div>
 
     <form class="textrow" id="textForm" style="margin-top:8px">
-      <input id="textInput" placeholder="文字でも。例：昼にラーメン / ごはんは80g" autocomplete="off">
-      <button type="submit">送る</button>
+      <input id="textInput" placeholder="食べたものを入力してみてね（例：昼にラーメン）" autocomplete="off">
+      <button type="submit">↑</button>
     </form>
     <p class="muted" style="margin:8px 2px 14px">写真だけでもOK。ひとこと足すと精度が上がるよ（「ピーナッツバター」「大盛り」など）。あとから「昼はカレーだった」でも大丈夫。</p>
 
@@ -187,8 +212,9 @@
 
   <!-- ========== 推移 ========== -->
   <section id="v-trend" class="view">
+    <div class="seg" id="periodSeg"><button class="on" data-days="7">1週間</button><button data-days="30">1ヶ月</button><button data-days="90">3ヶ月</button></div>
     <div class="card">
-      <div class="label">この7日</div>
+      <div class="label" id="weekLabel">この7日のカロリー収支</div>
       <div class="row" style="margin-top:6px">
         <div class="grow"><div class="big" id="weekMain">–</div><div class="muted" id="weekSub"></div></div>
       </div>
@@ -220,6 +246,7 @@
 
   <!-- ========== 相談 ========== -->
   <section id="v-chat" class="view">
+    <div class="chathead"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="54" r="38" fill="#ffd9df"/><ellipse cx="50" cy="30" rx="30" ry="14" fill="#8a5a4a"/><circle cx="26" cy="36" r="9" fill="#8a5a4a"/><circle cx="74" cy="36" r="9" fill="#8a5a4a"/><circle cx="38" cy="54" r="3.2" fill="#3b3031"/><circle cx="62" cy="54" r="3.2" fill="#3b3031"/><ellipse cx="30" cy="63" rx="6" ry="3.5" fill="#f7a8b8"/><ellipse cx="70" cy="63" rx="6" ry="3.5" fill="#f7a8b8"/><path d="M43 65 Q50 71 57 65" stroke="#3b3031" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M78 24 l2.5 5 5.5 .8 -4 3.9 .9 5.5 -4.9-2.6 -4.9 2.6 .9-5.5 -4-3.9 5.5-.8z" fill="#f08aa0"/></svg><div><div class="nm">きろくちゃん</div><div class="st">● いつでも聞いてね</div></div></div>
     <div class="quick">
       <button data-q="なんか食べたい！">なんか食べたい！</button>
       <button data-q="今日の調子どう？">今日の調子どう？</button>
@@ -292,7 +319,7 @@ let TOKEN = localStorage.getItem(LS.t) || '';
   }
 })();
 
-let SUMMARY = null;
+let SUMMARY = null; let PERIOD = 7;
 let SHOW_NUM = true;
 
 // ---------- API ----------
@@ -346,7 +373,7 @@ $('suBtn').onclick = async () => {
 
 // ---------- サマリー取得・描画 ----------
 async function refresh() {
-  const j = await api({ action: 'summary', days: 14 });
+  const j = await api({ action: 'summary', days: Math.max(14, PERIOD) });
   SUMMARY = j; SHOW_NUM = !!j.profile.show_numbers;
   render();
 }
@@ -357,9 +384,11 @@ function render() {
   const ratio = Math.min(1.15, t.kcal / t.target);
   $('todayBar').style.width = Math.min(100, ratio * 100) + '%';
   $('todayBar').className = t.kcal > t.target ? 'over' : '';
-  $('todayMain').innerHTML = esc(t.kcal) + '<small>kcal</small>';
+  $('todayMain').innerText = t.kcal;
   $('todaySub').innerText = t.remain_kcal >= 0 ? `あと ${t.remain_kcal} kcal（目安 ${t.target}）・たんぱく質 ${t.protein_g}g` : `${-t.remain_kcal} kcal オーバー（目安 ${t.target}）`;
-  $('todayPill').innerHTML = t.kcal === 0 ? '' : (t.remain_kcal >= 0 ? '<span class="pill">いい感じ</span>' : '<span class="pill warn">ちょっと多め</span>');
+  const arc = $('ringArc'); const C = 326.7; arc.style.strokeDashoffset = C * (1 - Math.min(1, t.kcal / t.target)); arc.style.stroke = t.kcal > t.target ? 'var(--warn)' : 'var(--accent)';
+  const h = new Date().getHours();
+  $('todayPill').innerHTML = t.kcal === 0 ? (h < 11 ? 'おはよう！<br>朝ごはん食べた？' : '今日も<br>いっしょに♪') : (t.remain_kcal < 0 ? 'ちょっと多め！<br>明日戻そ' : t.remain_kcal < 300 ? 'あと少し<br>いい感じ！' : 'いい感じ<br>だよ！この調子♪');
   // today list
   const L = $('todayList');
   if (!t.items.length) L.innerHTML = '<div class="muted">まだ記録がないよ</div>';
@@ -367,13 +396,15 @@ function render() {
   L.querySelectorAll('.del').forEach(b => b.onclick = () => delLog(b.dataset.id));
 
   // week
-  const w = s.week;
+  const pd = s.daily.slice(-PERIOD).filter(d => d.logged);
+  const w = { diff_kcal: pd.reduce((a, d) => a + d.diff, 0), logged_days: pd.length };
+  w.fat_kg_equiv = Math.round(w.diff_kcal / 7200 * 100) / 100;
   const sign = w.diff_kcal > 0 ? '+' : '';
   $('weekMain').innerHTML = w.logged_days ? `${sign}${w.diff_kcal}<small>kcal</small>` : '–';
   $('weekMain').style.color = w.diff_kcal > 0 ? 'var(--warn)' : 'var(--ok)';
-  if (SHOW_NUM) $('weekSub').innerText = w.logged_days ? `${w.logged_days}日分・目安との差の合計 ≒ 脂肪 ${w.fat_kg_equiv > 0 ? '+' : ''}${w.fat_kg_equiv}kg 相当` : 'まだ記録がないよ';
-  else { const okDays = s.daily.slice(-7).filter(d => d.logged && d.kcal <= d.target).length; $('weekSub').innerText = w.logged_days ? `${w.logged_days}日のうち ${okDays}日がOK（目安との差の合計）` : 'まだ記録がないよ'; }
-  drawKcal(s.daily.slice(-7));
+  $('weekSub').innerText = w.logged_days ? `${w.logged_days}日分・目安との差の合計 ≒ 脂肪 ${w.fat_kg_equiv > 0 ? '+' : ''}${w.fat_kg_equiv}kg 相当` : 'まだ記録がないよ';
+  $('weekLabel').innerText = PERIOD === 7 ? 'この7日のカロリー収支' : PERIOD === 30 ? 'この1ヶ月のカロリー収支' : 'この3ヶ月のカロリー収支';
+  if (PERIOD === 7) drawKcal(s.daily.slice(-7)); else drawKcal(s.daily.slice(-PERIOD));
   // weight
   const lw = s.latest_weight;
   if (lw) {
@@ -400,9 +431,11 @@ function breakdownOf(i) {
   const seg = String(i.note || '').split(' | ')[0];
   return /\d/.test(seg) && seg.includes(' ') && !/^補足|^写真から|^音声/.test(seg) ? seg : '';
 }
+const FOOD_ICONS = [[/ラーメン|うどん|そば|パスタ|スパゲ|焼きそば|麺/,'🍜'],[/カレー/,'🍛'],[/寿司|刺身|鮭|サバ|鯖|魚|ツナ|しらす/,'🐟'],[/とんかつ|カツ|唐揚|から揚|チキン|鶏|肉|ハンバーグ|ステーキ|焼肉|ソーセージ|ベーコン|ハム/,'🍖'],[/卵|たまご|オムレツ|目玉/,'🍳'],[/パン|トースト|サンド|バーガー|ピザ/,'🍞'],[/おにぎり|ご飯|ごはん|米|丼|玄米|チャーハン/,'🍙'],[/サラダ|キャベツ|野菜|きのこ|ブロッコリー|トマト|大根|ほうれん/,'🥗'],[/納豆|豆腐|味噌汁|みそ汁|スープ/,'🍲'],[/ヨーグルト|チーズ|牛乳|プロテイン/,'🥛'],[/ケーキ|チョコ|アイス|クッキー|ラムネ|お菓子|スナック|ポテチ|せんべい|柿の種|まんじゅう|プリン|ドーナツ/,'🍪'],[/りんご|バナナ|みかん|いちご|ぶどう|果物|フルーツ|柿/,'🍎'],[/コーヒー|お茶|紅茶|カフェ/,'☕'],[/ジュース|コーラ|サイダー|ソーダ/,'🥤'],[/ビール|酒|ワイン|焼酎|ハイボール|チューハイ/,'🍺']];
+function foodIcon(name) { const t = String(name || ''); for (const [re, ic] of FOOD_ICONS) if (re.test(t)) return ic; return '🍽️'; }
 function itemRow(i, withDel) {
   const bd = breakdownOf(i);
-  return `<div class="item"><div class="t">${esc(i.time)}</div><div class="n"><span class="meal">${esc(i.meal)}</span><b>${esc(i.items)}</b>${bd ? `<div class="bd">${esc(bd)}</div>` : ''}</div><div class="k">${esc(i.kcal)}</div>${withDel ? `<button class="del" data-id="${esc(i.id)}" title="取り消す">×</button>` : ''}</div>`;
+  return `<div class="item"><div class="ico">${foodIcon(i.items)}</div><div class="n"><span class="meal">${esc(i.time)} ${esc(i.meal)}</span><b>${esc(i.items)}</b>${bd ? `<div class="bd">${esc(bd)}</div>` : ''}</div><div class="k">${esc(i.kcal)}</div>${withDel ? `<button class="del" data-id="${esc(i.id)}" title="取り消す">×</button>` : ''}</div>`;
 }
 
 // ---------- charts (inline SVG) ----------
@@ -417,12 +450,13 @@ function drawKcal(days) {
   days.forEach((d, i) => {
     const x = pad.l + i * bw + bw * 0.18, w = bw * 0.64;
     const h = d.logged ? Math.max(2, y(0) - y(d.kcal)) : 0;
-    const col = d.kcal > target ? 'var(--warn)' : 'var(--accent)';
-    if (d.logged) svg += `<rect x="${x}" y="${y(d.kcal)}" width="${w}" height="${h}" rx="4" fill="${col}"/>`;
+    const col = d.kcal > target ? 'var(--warn)' : '#f7bfcb';
+    if (d.logged) svg += `<rect x="${x}" y="${y(d.kcal)}" width="${w}" height="${h}" rx="${Math.min(4, w / 2)}" fill="${col}"/>`;
     else svg += `<rect x="${x}" y="${y(0) - 2}" width="${w}" height="2" rx="1" fill="var(--line)"/>`;
     const lbl = d.date.slice(8).replace(/^0/, '');
-    svg += `<text x="${x + w / 2}" y="${H - 6}" font-size="10" text-anchor="middle" fill="var(--sub)">${lbl}</text>`;
-    if (d.logged) svg += `<text x="${x + w / 2}" y="${y(d.kcal) - 3}" font-size="9" text-anchor="middle" fill="var(--sub)">${d.kcal}</text>`;
+    const step = days.length > 14 ? Math.ceil(days.length / 7) : 1;
+    if (i % step === 0 || i === days.length - 1) svg += `<text x="${x + w / 2}" y="${H - 6}" font-size="10" text-anchor="middle" fill="var(--sub)">${days.length > 14 ? d.date.slice(5).replace('-', '/') : lbl}</text>`;
+    if (d.logged && days.length <= 7) svg += `<text x="${x + w / 2}" y="${y(d.kcal) - 3}" font-size="9" text-anchor="middle" fill="var(--sub)">${d.kcal}</text>`;
   });
   svg += '</svg>';
   $('kcalChart').innerHTML = svg;
@@ -439,7 +473,7 @@ function drawWeight(ws) {
   let svg = `<svg viewBox="0 0 ${W} ${H}">`;
   for (let g = Math.ceil(lo); g <= hi; g++) svg += `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(g)}" y2="${y(g)}" stroke="var(--line)" stroke-width="1"/><text x="${pad.l - 4}" y="${y(g) + 3}" font-size="9" text-anchor="end" fill="var(--sub)">${g}</text>`;
   if (SHOW_NUM) {
-    svg += `<polyline fill="none" stroke="var(--line)" stroke-width="1.5" points="${ws.map((w, i) => x(i) + ',' + y(w.weight_kg)).join(' ')}"/>`;
+    svg += `<polyline fill="none" stroke="#f3c6d0" stroke-width="1.5" points="${ws.map((w, i) => x(i) + ',' + y(w.weight_kg)).join(' ')}"/>`;
     ws.forEach((w, i) => svg += `<circle cx="${x(i)}" cy="${y(w.weight_kg)}" r="2.2" fill="var(--sub)"/>`);
   }
   svg += `<polyline fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points="${ws.map((w, i) => x(i) + ',' + y(w.avg7)).join(' ')}"/>`;
@@ -476,7 +510,7 @@ async function delLog(id) {
 // ---------- 文字 ----------
 const CORRECT_RE = /じゃなくて|じゃない|ではなく|違う|ちがう|さっきの|今の|いまの|直して|なおして|修正|間違|まちがい|もあった|はなかった|入ってない|抜けてる|多かった|少なかった|大盛|小盛/;
 $('textForm').onsubmit = e => {
-  e.preventDefault(); const v = $('textInput').value.trim(); if (!v) return; $('textInput').value = ''; $('textInput').placeholder = '文字でも。例：昼にラーメン / ごはんは80g';
+  e.preventDefault(); const v = $('textInput').value.trim(); if (!v) return; $('textInput').value = ''; $('textInput').placeholder = '食べたものを入力してみてね（例：昼にラーメン）';
   if (LAST_ID && (CORRECT_MODE || CORRECT_RE.test(v))) { CORRECT_MODE = false; submitCorrection(v); return; }
   submitMeal({ text: v }, '解析中：' + v);
 };
@@ -569,6 +603,11 @@ async function logWeight(wEl, fEl, btn) {
 }
 $('wBtn').onclick = () => logWeight($('wIn'), $('fIn'), $('wBtn'));
 $('wBtn2').onclick = () => logWeight($('wIn2'), $('fIn2'), $('wBtn2'));
+
+document.querySelectorAll('#periodSeg button').forEach(b => b.onclick = async () => {
+  PERIOD = Number(b.dataset.days); document.querySelectorAll('#periodSeg button').forEach(x => x.classList.toggle('on', x === b));
+  if (SUMMARY && SUMMARY.daily.length >= PERIOD) render(); else await refresh();
+});
 
 // ---------- 総括 ----------
 $('reviewBtn').onclick = async () => {
