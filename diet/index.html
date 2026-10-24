@@ -61,12 +61,16 @@
   .item .n b{font-weight:600}
   .item .k{font-weight:700;flex:none}
   .item .meal{font-size:11px;color:var(--sub);margin-right:6px}
+  .item .bd{font-size:12px;color:var(--sub);margin-top:2px;line-height:1.4}
   .item .del{border:none;background:none;color:var(--sub);font-size:18px;padding:0 4px;cursor:pointer}
   .pending{display:flex;gap:10px;align-items:center;padding:12px;border-radius:12px;background:var(--soft);margin-bottom:10px;font-size:14px}
   .spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:rot .8s linear infinite;flex:none}
   @keyframes rot{to{transform:rotate(360deg)}}
   .comment{background:var(--soft);border-radius:12px;padding:12px 14px;font-size:15px;margin-top:10px}
   .comment .who{font-size:11px;color:var(--accent);font-weight:700;margin-bottom:2px}
+  .bdlist{margin:6px 0 8px;border-top:1px solid var(--line)}
+  .bdrow{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px solid var(--line)}
+  .bdrow b{font-weight:700}
 
   /* charts */
   svg{width:100%;height:auto;display:block}
@@ -149,10 +153,10 @@
     </div>
 
     <div class="actions">
-      <button class="act" id="photoBtn"><span class="ic">📷</span>写真で記録</button>
+      <button class="act" id="photoBtn"><span class="ic">📷</span>写真で記録<small style="font-size:11px;font-weight:500;opacity:.85">撮る／アルバムから</small></button>
       <button class="act secondary" id="micBtn"><span class="ic">🎤</span>話して記録</button>
     </div>
-    <input type="file" id="photoInput" accept="image/*" capture="environment" class="hidden">
+    <input type="file" id="photoInput" accept="image/*" class="hidden">
     <div id="voiceStatus"></div>
 
     <form class="textrow" id="textForm" style="margin-top:8px">
@@ -188,6 +192,8 @@
       </div>
       <div id="kcalChart" style="margin-top:12px"></div>
       <div class="legend"><span><i style="background:var(--accent)"></i>食べた分</span><span><i style="background:var(--warn)"></i>多め</span><span><i style="background:var(--sub);height:2px"></i>目安</span></div>
+      <button class="ghost" id="reviewBtn">今週の総括を聞く</button>
+      <div id="reviewBox"></div>
     </div>
 
     <div class="card">
@@ -349,35 +355,22 @@ function render() {
   const ratio = Math.min(1.15, t.kcal / t.target);
   $('todayBar').style.width = Math.min(100, ratio * 100) + '%';
   $('todayBar').className = t.kcal > t.target ? 'over' : '';
-  if (SHOW_NUM) {
-    $('todayMain').innerHTML = esc(t.kcal) + '<small>kcal</small>';
-    $('todaySub').innerText = t.remain_kcal >= 0 ? `あと ${t.remain_kcal} kcal（目安 ${t.target}）・たんぱく質 ${t.protein_g}g` : `${-t.remain_kcal} kcal オーバー（目安 ${t.target}）`;
-    $('todayPill').innerHTML = t.remain_kcal >= 0 ? '<span class="pill">いい感じ</span>' : '<span class="pill warn">多め</span>';
-  } else {
-    const st = t.kcal === 0 ? '–' : (t.kcal <= t.target ? 'OK' : 'ちょっと多め');
-    $('todayMain').innerText = st;
-    $('todaySub').innerText = t.items.length ? `${t.items.length}回 記録した` : '今日はまだ';
-    $('todayPill').innerHTML = '';
-  }
+  $('todayMain').innerHTML = esc(t.kcal) + '<small>kcal</small>';
+  $('todaySub').innerText = t.remain_kcal >= 0 ? `あと ${t.remain_kcal} kcal（目安 ${t.target}）・たんぱく質 ${t.protein_g}g` : `${-t.remain_kcal} kcal オーバー（目安 ${t.target}）`;
+  $('todayPill').innerHTML = t.kcal === 0 ? '' : (t.remain_kcal >= 0 ? '<span class="pill">いい感じ</span>' : '<span class="pill warn">ちょっと多め</span>');
   // today list
   const L = $('todayList');
   if (!t.items.length) L.innerHTML = '<div class="muted">まだ記録がないよ</div>';
-  else L.innerHTML = t.items.map(i => `<div class="item"><div class="t">${esc(i.time)}</div><div class="n"><span class="meal">${esc(i.meal)}</span><b>${esc(i.items)}</b></div>${SHOW_NUM ? `<div class="k">${esc(i.kcal)}</div>` : ''}<button class="del" data-id="${esc(i.id)}" title="取り消す">×</button></div>`).join('');
+  else L.innerHTML = t.items.map(i => itemRow(i, true)).join('');
   L.querySelectorAll('.del').forEach(b => b.onclick = () => delLog(b.dataset.id));
 
   // week
   const w = s.week;
-  if (SHOW_NUM) {
-    const sign = w.diff_kcal > 0 ? '+' : '';
-    $('weekMain').innerHTML = `${sign}${w.diff_kcal}<small>kcal</small>`;
-    $('weekMain').style.color = w.diff_kcal > 0 ? 'var(--warn)' : 'var(--ok)';
-    $('weekSub').innerText = w.logged_days ? `${w.logged_days}日分・目安との差の合計 ≒ 脂肪 ${w.fat_kg_equiv > 0 ? '+' : ''}${w.fat_kg_equiv}kg 相当` : 'まだ記録がないよ';
-  } else {
-    const okDays = s.daily.slice(-7).filter(d => d.logged && d.kcal <= d.target).length;
-    $('weekMain').innerText = w.logged_days ? `${okDays}/${w.logged_days}日 OK` : '–';
-    $('weekMain').style.color = '';
-    $('weekSub').innerText = '記録した日のうち、OKだった日';
-  }
+  const sign = w.diff_kcal > 0 ? '+' : '';
+  $('weekMain').innerHTML = w.logged_days ? `${sign}${w.diff_kcal}<small>kcal</small>` : '–';
+  $('weekMain').style.color = w.diff_kcal > 0 ? 'var(--warn)' : 'var(--ok)';
+  if (SHOW_NUM) $('weekSub').innerText = w.logged_days ? `${w.logged_days}日分・目安との差の合計 ≒ 脂肪 ${w.fat_kg_equiv > 0 ? '+' : ''}${w.fat_kg_equiv}kg 相当` : 'まだ記録がないよ';
+  else { const okDays = s.daily.slice(-7).filter(d => d.logged && d.kcal <= d.target).length; $('weekSub').innerText = w.logged_days ? `${w.logged_days}日のうち ${okDays}日がOK（目安との差の合計）` : 'まだ記録がないよ'; }
   drawKcal(s.daily.slice(-7));
   // weight
   const lw = s.latest_weight;
@@ -393,10 +386,21 @@ function render() {
   // day list
   $('dayList').innerHTML = s.daily.slice().reverse().filter(d => d.logged).map(d => {
     const diff = d.diff;
-    const right = SHOW_NUM ? `<span>${d.kcal} <span class="${diff > 0 ? 'plus' : 'minus'}">${diff > 0 ? '+' : ''}${diff}</span></span>` : `<span class="${diff > 0 ? 'plus' : 'minus'}">${diff > 0 ? 'ちょっと多め' : 'OK'}</span>`;
-    const items = d.items.map(i => `<div class="item"><div class="t">${esc(i.time)}</div><div class="n"><span class="meal">${esc(i.meal)}</span>${esc(i.items)}</div>${SHOW_NUM ? `<div class="k">${esc(i.kcal)}</div>` : ''}</div>`).join('');
+    const right = `<span>${d.kcal} <span class="${diff > 0 ? 'plus' : 'minus'}">${diff > 0 ? '+' : ''}${diff}</span></span>`;
+    const items = d.items.map(i => itemRow(i, false)).join('');
     return `<details><summary><span class="d">${d.date.slice(5).replace('-', '/')}</span>${right}</summary><div style="margin-top:6px">${items}</div></details>`;
   }).join('') || '<div class="muted">まだ記録がないよ</div>';
+}
+
+// 内訳は note の先頭セグメント「とんかつ2切れ 200 / ご飯 250」
+function breakdownOf(i) {
+  if (Array.isArray(i.breakdown) && i.breakdown.length) return i.breakdown.map(b => `${b.name} ${b.kcal}`).join(' / ');
+  const seg = String(i.note || '').split(' | ')[0];
+  return /\d/.test(seg) && seg.includes(' ') && !/^補足|^写真から|^音声/.test(seg) ? seg : '';
+}
+function itemRow(i, withDel) {
+  const bd = breakdownOf(i);
+  return `<div class="item"><div class="t">${esc(i.time)}</div><div class="n"><span class="meal">${esc(i.meal)}</span><b>${esc(i.items)}</b>${bd ? `<div class="bd">${esc(bd)}</div>` : ''}</div><div class="k">${esc(i.kcal)}</div>${withDel ? `<button class="del" data-id="${esc(i.id)}" title="取り消す">×</button>` : ''}</div>`;
 }
 
 // ---------- charts (inline SVG) ----------
@@ -416,7 +420,7 @@ function drawKcal(days) {
     else svg += `<rect x="${x}" y="${y(0) - 2}" width="${w}" height="2" rx="1" fill="var(--line)"/>`;
     const lbl = d.date.slice(8).replace(/^0/, '');
     svg += `<text x="${x + w / 2}" y="${H - 6}" font-size="10" text-anchor="middle" fill="var(--sub)">${lbl}</text>`;
-    if (SHOW_NUM && d.logged) svg += `<text x="${x + w / 2}" y="${y(d.kcal) - 3}" font-size="9" text-anchor="middle" fill="var(--sub)">${d.kcal}</text>`;
+    if (d.logged) svg += `<text x="${x + w / 2}" y="${y(d.kcal) - 3}" font-size="9" text-anchor="middle" fill="var(--sub)">${d.kcal}</text>`;
   });
   svg += '</svg>';
   $('kcalChart').innerHTML = svg;
@@ -449,8 +453,9 @@ function onLogged(j, label) {
   // refresh in background for full summary
   refresh().catch(() => {});
   const r = j.record;
-  const head = SHOW_NUM ? `${r.meal} ${r.items} 約${r.kcal}kcal` : `${r.meal} ${r.items}`;
-  $('lastComment').innerHTML = `<div class="comment"><div class="who">記録したよ：${esc(head)}</div>${esc(j.comment || '')}${r.transcript ? `<div class="muted" style="margin-top:6px">聞き取り：「${esc(r.transcript)}」</div>` : ''}</div>`;
+  const head = `${r.meal} ${r.items} 約${r.kcal}kcal`;
+  const bd = (r.breakdown || []).map(b => `<div class="bdrow"><span>${esc(b.name)}</span><b>${esc(b.kcal)}</b></div>`).join('');
+  $('lastComment').innerHTML = `<div class="comment"><div class="who">記録したよ：${esc(head)}</div>${bd ? `<div class="bdlist">${bd}</div>` : ''}${esc(j.comment || '')}${r.transcript ? `<div class="muted" style="margin-top:6px">聞き取り：「${esc(r.transcript)}」</div>` : ''}</div>`;
   toast('記録した');
 }
 async function submitMeal(payload, label) {
@@ -549,6 +554,14 @@ async function logWeight(wEl, fEl, btn) {
 }
 $('wBtn').onclick = () => logWeight($('wIn'), $('fIn'), $('wBtn'));
 $('wBtn2').onclick = () => logWeight($('wIn2'), $('fIn2'), $('wBtn2'));
+
+// ---------- 総括 ----------
+$('reviewBtn').onclick = async () => {
+  const b = $('reviewBtn'); b.disabled = true; b.innerText = '7日分を読んでる…';
+  try { const j = await api({ action: 'review' }); $('reviewBox').innerHTML = `<div class="comment" style="margin-top:10px"><div class="who">今週の総括</div>${esc(j.review)}</div>`; }
+  catch (e) { toast(e.message, true); }
+  b.disabled = false; b.innerText = 'もう一度聞く';
+};
 
 // ---------- 設定 ----------
 let PROFILE = null;
