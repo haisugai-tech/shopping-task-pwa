@@ -145,6 +145,10 @@
   .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tab-h) + 20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;z-index:20}
   .toast.show{opacity:1}
   .toast.err{background:var(--warn)}
+  .sheet{position:fixed;inset:0;background:rgba(40,20,25,.35);display:flex;align-items:flex-end;justify-content:center;z-index:30;padding:0 12px calc(12px + env(safe-area-inset-bottom))}
+  .sheet-box{width:100%;max-width:480px;display:flex;flex-direction:column;gap:8px}
+  .sheet-box button{border:none;border-radius:18px;padding:16px;font-size:17px;font-weight:800;background:var(--card);color:var(--accent-deep)}
+  .sheet-box button.cancel{color:var(--sub);font-weight:700}
   .hidden{display:none!important}
 </style>
 </head>
@@ -184,6 +188,14 @@
       <button class="act secondary" id="micBtn"><span class="ic">🎤</span>話して記録</button>
     </div>
     <input type="file" id="photoInput" accept="image/*" class="hidden">
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden">
+    <div id="photoSheet" class="sheet hidden">
+      <div class="sheet-box">
+        <button id="pickCamera">📷 カメラで撮る</button>
+        <button id="pickAlbum">🖼 アルバムから選ぶ</button>
+        <button id="pickCancel" class="cancel">やめる</button>
+      </div>
+    </div>
     <div id="voiceStatus"></div>
 
     <form class="textrow" id="textForm" style="margin-top:8px">
@@ -521,7 +533,12 @@ async function submitCorrection(text) {
 }
 
 // ---------- 写真 ----------
-$('photoBtn').onclick = () => $('photoInput').click();
+$('photoBtn').onclick = () => $('photoSheet').classList.remove('hidden');
+$('pickCancel').onclick = () => $('photoSheet').classList.add('hidden');
+$('photoSheet').onclick = e => { if (e.target.id === 'photoSheet') $('photoSheet').classList.add('hidden'); };
+$('pickCamera').onclick = () => { $('photoSheet').classList.add('hidden'); $('cameraInput').click(); };
+$('pickAlbum').onclick = () => { $('photoSheet').classList.add('hidden'); $('photoInput').click(); };
+$('cameraInput').onchange = e => $('photoInput').onchange(e);
 $('photoInput').onchange = async e => {
   const f = e.target.files[0]; if (!f) return; e.target.value = '';
   const note = $('textInput').value.trim(); $('textInput').value = '';
