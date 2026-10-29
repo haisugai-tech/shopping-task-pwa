@@ -79,7 +79,14 @@
   .item .k::after{content:" kcal";font-size:11px;color:var(--sub);font-weight:600}
   .item .meal{font-size:11px;color:var(--sub);margin-right:6px}
   .item .bd{font-size:12px;color:var(--sub);margin-top:2px;line-height:1.4}
-  .item .del{border:none;background:none;color:var(--sub);font-size:18px;padding:0 4px;cursor:pointer}
+  .item .del,.item .edt{border:none;background:none;color:var(--sub);font-size:18px;padding:0 4px;cursor:pointer}
+  .item .edt{font-size:16px}
+  .editbar{display:none;align-items:center;gap:8px;background:#fff4d6;border:1px solid #f2d27a;border-radius:14px;padding:8px 12px;margin-top:8px;font-size:13px}
+  .editbar.show{display:flex}
+  .editbar b{flex:1;min-width:0}
+  .editbar button{border:none;background:none;color:var(--sub);font-size:13px;font-weight:700}
+  .histbtn{width:100%;margin-top:10px;border:1px dashed var(--accent);background:var(--card);color:var(--accent-deep);border-radius:14px;padding:10px;font-weight:800;font-size:14px}
+  .daylist .older summary{opacity:.85}
   .pending{display:flex;gap:10px;align-items:center;padding:12px;border-radius:16px;background:var(--soft);margin-bottom:10px;font-size:14px}
   .spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:rot .8s linear infinite;flex:none}
   @keyframes rot{to{transform:rotate(360deg)}}
@@ -198,6 +205,7 @@
     </div>
     <div id="voiceStatus"></div>
 
+    <div class="editbar" id="editBar"><b id="editLabel"></b><button id="editCancel">やめる</button></div>
     <form class="textrow" id="textForm" style="margin-top:8px">
       <input id="textInput" placeholder="食べたものを入力してみてね（例：昼にラーメン）" autocomplete="off">
       <button type="submit">↑</button>
@@ -210,6 +218,7 @@
     <div class="card" style="margin-top:12px">
       <div class="label">今日食べたもの</div>
       <div id="todayList" style="margin-top:8px"><div class="muted">まだ記録がないよ</div></div>
+      <button class="histbtn" id="histBtn">📅 昨日より前の記録を見る・直す</button>
     </div>
 
     <div class="card" id="homeWeightCard">
@@ -251,7 +260,8 @@
     </div>
 
     <div class="card daylist">
-      <div class="label">日ごと（タップで中身）</div>
+      <div class="label">毎日の記録（✏️で直す・×で消す）</div>
+      <div class="muted" style="font-size:12px">直近7日は中身まで表示。それより前は合計だけ（タップで開く）</div>
       <div id="dayList" style="margin-top:6px"></div>
     </div>
   </section>
@@ -405,7 +415,7 @@ function render() {
   const L = $('todayList');
   if (!t.items.length) L.innerHTML = '<div class="muted">まだ記録がないよ</div>';
   else L.innerHTML = t.items.map(i => itemRow(i, true)).join('');
-  L.querySelectorAll('.del').forEach(b => b.onclick = () => delLog(b.dataset.id));
+  bindItemActions(L);
 
   // week
   const pd = s.daily.slice(-PERIOD).filter(d => d.logged);
@@ -429,12 +439,19 @@ function render() {
   const todayW = lw && lw.date === t.date;
   $('homeWeightNote').innerText = todayW ? (SHOW_NUM ? `今日 ${lw.weight_kg}kg 記録済み` : '今日は記録済み') : (lw ? `前回 ${lw.date.slice(5).replace('-', '/')}` : '');
   // day list
+  ITEMS = {};
+  s.daily.forEach(d => d.items.forEach(i => ITEMS[i.id] = Object.assign({ date: d.date }, i)));
+  const recent = s.daily.slice(-7).map(d => d.date);
+  const DOW = ['日', '月', '火', '水', '木', '金', '土'];
   $('dayList').innerHTML = s.daily.slice().reverse().filter(d => d.logged).map(d => {
     const diff = d.diff;
     const right = `<span>${d.kcal} <span class="${diff > 0 ? 'plus' : 'minus'}">${diff > 0 ? '+' : ''}${diff}</span></span>`;
-    const items = d.items.map(i => itemRow(i, false)).join('');
-    return `<details><summary><span class="d">${d.date.slice(5).replace('-', '/')}</span>${right}</summary><div style="margin-top:6px">${items}</div></details>`;
+    const items = d.items.map(i => itemRow(i, true)).join('');
+    const isRecent = recent.includes(d.date);
+    const dl = d.date.slice(5).replace('-', '/') + '(' + DOW[new Date(d.date + 'T00:00:00').getDay()] + ')' + (d.date === t.date ? ' 今日' : '');
+    return `<details class="${isRecent ? '' : 'older'}" ${isRecent ? 'open' : ''}><summary><span class="d">${dl}</span>${right}</summary><div style="margin-top:6px">${items}</div></details>`;
   }).join('') || '<div class="muted">まだ記録がないよ</div>';
+  bindItemActions($('dayList'));
 }
 
 // 内訳は note の先頭セグメント「とんかつ2切れ 200 / ご飯 250」
@@ -447,7 +464,7 @@ const FOOD_ICONS = [[/ラーメン|うどん|そば|パスタ|スパゲ|焼き�
 function foodIcon(name) { const t = String(name || ''); for (const [re, ic] of FOOD_ICONS) if (re.test(t)) return ic; return '🍽️'; }
 function itemRow(i, withDel) {
   const bd = breakdownOf(i);
-  return `<div class="item"><div class="ico">${foodIcon(i.items)}</div><div class="n"><span class="meal">${esc(i.time)} ${esc(i.meal)}</span><b>${esc(i.items)}</b>${bd ? `<div class="bd">${esc(bd)}</div>` : ''}</div><div class="k">${esc(i.kcal)}</div>${withDel ? `<button class="del" data-id="${esc(i.id)}" title="取り消す">×</button>` : ''}</div>`;
+  return `<div class="item"><div class="ico">${foodIcon(i.items)}</div><div class="n"><span class="meal">${esc(i.time)} ${esc(i.meal)}</span><b>${esc(i.items)}</b>${bd ? `<div class="bd">${esc(bd)}</div>` : ''}</div><div class="k">${esc(i.kcal)}</div>${withDel ? `<button class="edt" data-id="${esc(i.id)}" title="直す">✏️</button><button class="del" data-id="${esc(i.id)}" title="取り消す">×</button>` : ''}</div>`;
 }
 
 // ---------- charts (inline SVG) ----------
@@ -496,7 +513,34 @@ function drawWeight(ws) {
 }
 
 // ---------- 記録：共通 ----------
-let LAST_ID = null, CORRECT_MODE = false;
+let LAST_ID = null, CORRECT_MODE = false, ITEMS = {};
+// 写真の解析中・直後（3分）に送った文字/声は、新しい記録にせずその写真の記録への追加・訂正として扱う（二重計上防止）
+let PHOTO_WAIT = null, LAST_PHOTO = null, EDIT_ID = null, CORR_CHAIN = Promise.resolve();
+const ATTACH_MS = 3 * 60 * 1000;
+function bindItemActions(root) {
+  root.querySelectorAll('.del').forEach(b => b.onclick = e => { e.preventDefault(); delLog(b.dataset.id); });
+  root.querySelectorAll('.edt').forEach(b => b.onclick = e => { e.preventDefault(); startEdit(b.dataset.id); });
+}
+function startEdit(id) {
+  const it = ITEMS[id] || (SUMMARY && SUMMARY.today.items.find(x => x.id === id)) || {};
+  EDIT_ID = id; CORRECT_MODE = false;
+  const d = it.date ? it.date.slice(5).replace('-', '/') + ' ' : '';
+  $('editLabel').innerText = `✏️ ${d}${it.meal || ''}「${it.items || ''}」を直す：文字かマイクで`;
+  $('editBar').classList.add('show');
+  showView('home');
+  const ti = $('textInput'); ti.placeholder = '例：ご飯は100g／唐揚げは2個／これ昨日の分'; setTimeout(() => ti.focus(), 100);
+}
+function endEdit() { EDIT_ID = null; $('editBar').classList.remove('show'); $('textInput').placeholder = '食べたものを入力してみてね（例：昼にラーメン）'; }
+$('editCancel').onclick = endEdit;
+$('histBtn').onclick = () => { showView('trend'); setTimeout(() => $('dayList').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80); };
+// 送った内容をどの記録に向けるか。null なら新しい記録
+function correctionTarget(text) {
+  if (EDIT_ID) { const id = EDIT_ID; endEdit(); return { id, label: '直してる' }; }
+  if (PHOTO_WAIT) return { wait: PHOTO_WAIT, label: '写真の記録に足してる' };
+  if (LAST_PHOTO && Date.now() - LAST_PHOTO.at < ATTACH_MS) return { id: LAST_PHOTO.id, label: 'さっきの写真の記録に足してる' };
+  if (LAST_ID && (CORRECT_MODE || (text && CORRECT_RE.test(text)))) { CORRECT_MODE = false; return { id: LAST_ID, label: '直してる' }; }
+  return null;
+}
 function onLogged(j, label) {
   SUMMARY.today = j.today; LAST_ID = j.id; CORRECT_MODE = false;
   // refresh in background for full summary
@@ -506,13 +550,27 @@ function onLogged(j, label) {
   const bd = (r.breakdown || []).map(b => `<div class="bdrow"><span>${esc(b.name)}</span><b>${esc(b.kcal)}</b></div>`).join('');
   const title = j.corrected ? '直したよ：' : '記録したよ：';
   $('lastComment').innerHTML = `<div class="comment"><div class="who">${title}${esc(head)}</div>${bd ? `<div class="bdlist">${bd}</div>` : ''}${esc(j.comment || '')}${r.transcript ? `<div class="muted" style="margin-top:6px">聞き取り：「${esc(r.transcript)}」</div>` : ''}<div class="fixrow"><button class="fixbtn" id="fixBtn">✏️ この記録を直す</button><span class="muted">例：大根じゃなくてきのこ／サラダもあった／ご飯は80g</span></div></div>`;
-  $('fixBtn').onclick = () => { CORRECT_MODE = true; const ti = $('textInput'); ti.placeholder = '直したいことを書いて送る'; ti.focus(); toast('次に送った文字で、この記録を直すよ'); };
+  $('fixBtn').onclick = () => startEdit(j.id);
+  ITEMS[j.id] = Object.assign({}, r);
   toast('記録した');
 }
 async function submitMeal(payload, label) {
   const pid = addPending(label);
-  try { const j = await api(Object.assign({ action: 'logMeal' }, payload)); rmPending(pid); onLogged(j); }
-  catch (e) { rmPending(pid); toast(e.message || '記録に失敗', true); }
+  const isPhoto = !!payload.imageBase64;
+  let done;
+  const idP = new Promise(r => done = r);
+  if (isPhoto) PHOTO_WAIT = idP;
+  try {
+    const j = await api(Object.assign({ action: 'logMeal' }, payload)); rmPending(pid);
+    if (isPhoto) LAST_PHOTO = { id: j.id, at: Date.now() };
+    done(j.id); onLogged(j);
+  } catch (e) { rmPending(pid); done(null); toast(e.message || '記録に失敗', true); }
+  finally { if (PHOTO_WAIT === idP) PHOTO_WAIT = null; }
+}
+// 文字/声の入口はここに集約
+function submitInput(payload, label) {
+  const tg = correctionTarget(payload.text && !payload.audioBase64 ? payload.text : '');
+  if (tg) submitCorrection(payload, tg); else submitMeal(payload, label);
 }
 async function delLog(id) {
   if (!confirm('この記録を取り消す？')) return;
@@ -523,13 +581,17 @@ async function delLog(id) {
 const CORRECT_RE = /じゃなくて|じゃない|ではなく|違う|ちがう|さっきの|今の|いまの|直して|なおして|修正|間違|まちがい|もあった|はなかった|入ってない|抜けてる|多かった|少なかった|大盛|小盛/;
 $('textForm').onsubmit = e => {
   e.preventDefault(); const v = $('textInput').value.trim(); if (!v) return; $('textInput').value = ''; $('textInput').placeholder = '食べたものを入力してみてね（例：昼にラーメン）';
-  if (LAST_ID && (CORRECT_MODE || CORRECT_RE.test(v))) { CORRECT_MODE = false; submitCorrection(v); return; }
-  submitMeal({ text: v }, '解析中：' + v);
+  submitInput({ text: v }, '解析中：' + v);
 };
-async function submitCorrection(text) {
-  const pid = addPending('直してる：' + text);
-  try { const j = await api({ action: 'correctLog', id: LAST_ID, text }); rmPending(pid); j.corrected = true; onLogged(j); }
-  catch (e) { rmPending(pid); toast(e.message || '直せなかった', true); }
+function submitCorrection(payload, tg) {
+  const pid = addPending(tg.label + '：' + (payload.text || '声'));
+  // 同じ記録への訂正が重なっても上書きし合わないよう順番に処理
+  CORR_CHAIN = CORR_CHAIN.then(async () => {
+    const id = tg.id || await tg.wait;
+    if (!id) { rmPending(pid); return submitMeal(payload, '解析中：' + (payload.text || '声')); }
+    try { const j = await api(Object.assign({ action: 'correctLog', id }, payload)); rmPending(pid); j.corrected = true; onLogged(j); if (LAST_PHOTO && LAST_PHOTO.id === id) LAST_PHOTO.at = Date.now(); }
+    catch (e) { rmPending(pid); toast(e.message || '直せなかった', true); }
+  });
 }
 
 // ---------- 写真 ----------
@@ -583,7 +645,7 @@ async function startRec() {
       const blob = new Blob(chunks, { type: actual });
       const b64 = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(',')[1]); fr.readAsDataURL(blob); });
       const note = $('textInput').value.trim(); $('textInput').value = '';
-      submitMeal({ audioBase64: b64, audioMime: actual.split(';')[0], text: note || undefined }, '声を解析中…');
+      submitInput({ audioBase64: b64, audioMime: actual.split(';')[0], text: note || undefined }, '声を解析中…');
     };
     mediaRecorder.start(); isRec = true;
     $('micBtn').classList.add('recording'); $('micBtn').innerHTML = '<span class="ic">⏹</span>タップで送信';
