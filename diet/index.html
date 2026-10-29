@@ -55,6 +55,9 @@
   .bubble{background:var(--soft);border-radius:16px;padding:8px 12px;font-size:13px;font-weight:700;color:var(--accent-deep);position:relative;text-align:center}
   .bubble::after{content:"";position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--soft);border-bottom:0}
   .mascot svg{width:92px;height:92px}
+  .avatar{border-radius:50%;object-fit:cover;flex:none;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+  .mascot .avatar{width:92px;height:92px}
+  .chathead .avatar{width:64px;height:64px}
 
   /* actions */
   .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
@@ -370,7 +373,18 @@ function showView(v) {
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => showView(b.dataset.v));
 
 // ---------- 初期設定 ----------
+// ユーザー別の見た目（サプライズ用）。画像は avatars/ に置く
+const AVATARS = { friend1: { img: 'avatars/friend1.jpg' } };
+function applyAvatar() {
+  const a = AVATARS[USER]; if (!a) return;
+  document.querySelectorAll('.mascot svg, .chathead svg').forEach(sv => {
+    const im = document.createElement('img'); im.src = a.img; im.className = 'avatar'; im.alt = '';
+    sv.replaceWith(im);
+  });
+  if (a.name) document.querySelectorAll('.chathead .nm').forEach(e => e.innerText = a.name);
+}
 async function boot() {
+  applyAvatar();
   if (!USER || !TOKEN) { $('setup').classList.add('show'); return; }
   try {
     await refresh();
@@ -386,7 +400,7 @@ $('suBtn').onclick = async () => {
   $('suMsg').innerText = '確認中…';
   try {
     await api({ action: 'ping' });
-    localStorage.setItem(LS.u, USER); localStorage.setItem(LS.t, TOKEN);
+    localStorage.setItem(LS.u, USER); localStorage.setItem(LS.t, TOKEN); applyAvatar();
     $('suMsg').innerText = '';
     $('setup').classList.remove('show');
     await refresh();
