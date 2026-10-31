@@ -294,13 +294,6 @@
         <div class="field"><label>身長 cm</label><input id="pHeight" type="number" inputmode="decimal" step="0.1"></div>
         <div class="field"><label>年齢</label><input id="pAge" type="number" inputmode="numeric"></div>
       </div>
-      <div class="field"><label>ふだんの動き方</label><select id="pAct">
-        <option value="sit">座り仕事・家にいることが多い</option>
-        <option value="light">学生・家事でけっこう動く</option>
-        <option value="stand">立ち仕事（販売・飲食など）</option>
-        <option value="heavy">立ち仕事＋力を使う（マッサージ・介護・運動部など）</option>
-      </select></div>
-      <p class="muted" style="margin:4px 0 0;font-size:12px">変えたら下の「自動計算」を押すと、1日の目安に反映されるよ</p>
     </div>
     <div class="card">
       <div class="label">目標</div>
@@ -317,7 +310,7 @@
         <div class="field"><label>カロリー kcal</label><input id="pKcal" type="number" inputmode="numeric" step="10"></div>
         <div class="field"><label>たんぱく質 g</label><input id="pProt" type="number" inputmode="numeric"></div>
       </div>
-      <button class="ghost" id="suggestBtn">身長・体重・期限から自動計算</button>
+      <button class="ghost" id="suggestBtn">記録と体重の減り方から自動計算</button>
       <p class="muted" id="suggestNote" style="margin:6px 0 0"></p>
     </div>
     <button class="act" id="saveProfile" style="width:100%">保存</button>
@@ -697,7 +690,7 @@ async function logWeight(wEl, fEl, btn) {
   const w = parseFloat(wEl.value); if (!w) { toast('体重を入れてね', true); return; }
   const f = fEl.value ? parseFloat(fEl.value) : '';
   btn.disabled = true;
-  try { const j = await api({ action: 'logWeight', weight_kg: w, fat_pct: f }); SUMMARY = Object.assign(SUMMARY, j.summary); render(); wEl.value = ''; fEl.value = ''; toast('体重を記録した'); }
+  try { const j = await api({ action: 'logWeight', weight_kg: w, fat_pct: f }); SUMMARY = Object.assign(SUMMARY, j.summary); render(); wEl.value = ''; fEl.value = ''; if (j.message) { $('lastComment').innerHTML = `<div class="comment"><div class="who">おめでとう</div>${esc(j.message)}</div>`; showView('home'); toast('目標達成！'); } else toast('体重を記録した'); }
   catch (e) { toast(e.message, true); }
   btn.disabled = false;
 }
@@ -722,7 +715,7 @@ let PROFILE = null;
 async function loadProfile() {
   try {
     const j = await api({ action: 'getProfile' }); PROFILE = j.profile; const p = PROFILE;
-    $('pName').value = p.name || ''; $('pHeight').value = p.height_cm || ''; $('pAge').value = p.age || ''; $('pAct').value = p.activity || 'sit';
+    $('pName').value = p.name || ''; $('pHeight').value = p.height_cm || ''; $('pAge').value = p.age || '';
     $('pStart').value = p.start_weight || ''; $('pGoal').value = p.goal_weight || ''; $('pDate').value = p.goal_date || '';
     $('pKcal').value = p.kcal_target || ''; $('pProt').value = p.protein_target || '';
     $('kcalCard').classList.toggle('hidden', !p.show_numbers);
@@ -748,16 +741,20 @@ $('suggestBtn').onclick = async () => {
   $('suggestNote').innerText = '計算中…';
   try {
     // save current height/age/goal first so the calc uses them
-    await api({ action: 'updateProfile', height_cm: $('pHeight').value, age: $('pAge').value, activity: $('pAct').value, goal_weight: $('pGoal').value, goal_date: $('pDate').value, start_weight: $('pStart').value });
+    await api({ action: 'updateProfile', height_cm: $('pHeight').value, age: $('pAge').value, goal_weight: $('pGoal').value, goal_date: $('pDate').value, start_weight: $('pStart').value });
     const j = await api({ action: 'suggestKcal' });
     $('pKcal').value = j.kcal;
-    $('suggestNote').innerText = `目安 ${j.kcal}kcal／日。ふだんの動き方から出した消費量から、期限に間に合う分だけ引いた数字。下限は守ってある。よければ「保存」を押してね`;
+    const basis = j.basis === 'measured'
+      ? `あなたの記録（${j.est.logged_days}日分）と体重の減り方から計算した、実際の消費は約${j.tdee}kcal。`
+      : `まだ記録が少ないので、身長・体重・年齢から出した一般的な消費（約${j.tdee}kcal）で計算。2週間ほど記録がたまると、あなたの実際の減り方から計算するよ。`;
+    $('suggestNote').innerText = j.keep ? `${basis}目標達成中なので、キープの目安は ${j.kcal}kcal／日。よければ「保存」を押してね`
+      : `${basis}そこから期限に間に合う分を引いて、目安 ${j.kcal}kcal／日。よければ「保存」を押してね`;
   } catch (e) { $('suggestNote').innerText = e.message; }
 };
 $('saveProfile').onclick = async () => {
   $('saveProfile').disabled = true;
   try {
-    const body = { action: 'updateProfile', name: $('pName').value.trim(), height_cm: $('pHeight').value, age: $('pAge').value, activity: $('pAct').value, start_weight: $('pStart').value, goal_weight: $('pGoal').value, goal_date: $('pDate').value, protein_target: $('pProt').value };
+    const body = { action: 'updateProfile', name: $('pName').value.trim(), height_cm: $('pHeight').value, age: $('pAge').value, start_weight: $('pStart').value, goal_weight: $('pGoal').value, goal_date: $('pDate').value, protein_target: $('pProt').value };
     if (SHOW_NUM) body.kcal_target = $('pKcal').value;
     const j = await api(body);
     PROFILE = j.profile; SUMMARY = Object.assign(SUMMARY || {}, j.summary); render(); toast('保存した');
