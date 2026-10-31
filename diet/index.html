@@ -136,7 +136,7 @@
   /* settings */
   .field{margin-top:10px}
   .field label{display:block;font-size:12px;color:var(--sub);margin-bottom:4px}
-  .field input{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px;font-size:17px;background:var(--card);color:var(--ink)}
+  .field input,.field select{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px;font-size:17px;background:var(--card);color:var(--ink)}
   .field2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .ghost{margin-top:12px;width:100%;border:1px solid var(--line);background:var(--card);color:var(--accent-deep);border-radius:999px;padding:12px;font-weight:800;font-size:14px}
 
@@ -294,6 +294,13 @@
         <div class="field"><label>身長 cm</label><input id="pHeight" type="number" inputmode="decimal" step="0.1"></div>
         <div class="field"><label>年齢</label><input id="pAge" type="number" inputmode="numeric"></div>
       </div>
+      <div class="field"><label>ふだんの動き方</label><select id="pAct">
+        <option value="sit">座り仕事・家にいることが多い</option>
+        <option value="light">学生・家事でけっこう動く</option>
+        <option value="stand">立ち仕事（販売・飲食など）</option>
+        <option value="heavy">立ち仕事＋力を使う（マッサージ・介護・運動部など）</option>
+      </select></div>
+      <p class="muted" style="margin:4px 0 0;font-size:12px">変えたら下の「自動計算」を押すと、1日の目安に反映されるよ</p>
     </div>
     <div class="card">
       <div class="label">目標</div>
@@ -715,7 +722,7 @@ let PROFILE = null;
 async function loadProfile() {
   try {
     const j = await api({ action: 'getProfile' }); PROFILE = j.profile; const p = PROFILE;
-    $('pName').value = p.name || ''; $('pHeight').value = p.height_cm || ''; $('pAge').value = p.age || '';
+    $('pName').value = p.name || ''; $('pHeight').value = p.height_cm || ''; $('pAge').value = p.age || ''; $('pAct').value = p.activity || 'sit';
     $('pStart').value = p.start_weight || ''; $('pGoal').value = p.goal_weight || ''; $('pDate').value = p.goal_date || '';
     $('pKcal').value = p.kcal_target || ''; $('pProt').value = p.protein_target || '';
     $('kcalCard').classList.toggle('hidden', !p.show_numbers);
@@ -741,16 +748,16 @@ $('suggestBtn').onclick = async () => {
   $('suggestNote').innerText = '計算中…';
   try {
     // save current height/age/goal first so the calc uses them
-    await api({ action: 'updateProfile', height_cm: $('pHeight').value, age: $('pAge').value, goal_weight: $('pGoal').value, goal_date: $('pDate').value, start_weight: $('pStart').value });
+    await api({ action: 'updateProfile', height_cm: $('pHeight').value, age: $('pAge').value, activity: $('pAct').value, goal_weight: $('pGoal').value, goal_date: $('pDate').value, start_weight: $('pStart').value });
     const j = await api({ action: 'suggestKcal' });
     $('pKcal').value = j.kcal;
-    $('suggestNote').innerText = `目安 ${j.kcal}kcal／日。軽い活動量の消費から、期限に間に合う分だけ引いた数字。下限は守ってある`;
+    $('suggestNote').innerText = `目安 ${j.kcal}kcal／日。ふだんの動き方から出した消費量から、期限に間に合う分だけ引いた数字。下限は守ってある。よければ「保存」を押してね`;
   } catch (e) { $('suggestNote').innerText = e.message; }
 };
 $('saveProfile').onclick = async () => {
   $('saveProfile').disabled = true;
   try {
-    const body = { action: 'updateProfile', name: $('pName').value.trim(), height_cm: $('pHeight').value, age: $('pAge').value, start_weight: $('pStart').value, goal_weight: $('pGoal').value, goal_date: $('pDate').value, protein_target: $('pProt').value };
+    const body = { action: 'updateProfile', name: $('pName').value.trim(), height_cm: $('pHeight').value, age: $('pAge').value, activity: $('pAct').value, start_weight: $('pStart').value, goal_weight: $('pGoal').value, goal_date: $('pDate').value, protein_target: $('pProt').value };
     if (SHOW_NUM) body.kcal_target = $('pKcal').value;
     const j = await api(body);
     PROFILE = j.profile; SUMMARY = Object.assign(SUMMARY || {}, j.summary); render(); toast('保存した');
