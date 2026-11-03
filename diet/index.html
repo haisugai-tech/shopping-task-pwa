@@ -59,6 +59,8 @@
   .keepline b{color:var(--ink)}
   .keepline.inside b{color:var(--ok)}
   .keepline.out b{color:var(--warn)}
+  .keepwarn{font-size:12px;color:var(--warn);margin-top:4px;line-height:1.5}
+  .keepwarn:empty{display:none}
   .avatar{border-radius:50%;object-fit:cover;flex:none;box-shadow:0 2px 8px rgba(0,0,0,.15)}
   .mascot .avatar{width:92px;height:92px}
   .chathead .avatar{width:64px;height:64px}
@@ -195,6 +197,7 @@
       </div>
       <div class="muted" id="todaySub" style="margin-top:10px"></div>
       <div class="keepline" id="keepLine"></div>
+      <div class="keepwarn" id="keepWarn"></div>
       <div class="bar"><i id="todayBar" style="width:0%"></i></div>
     </div>
 
@@ -434,6 +437,20 @@ function render() {
   else if (t.kcal <= t.target) { KL.className = 'keepline'; KL.innerHTML = `🛡 キープライン 約<b>${kp}</b> kcal（ここまでなら増えない）`; }
   else if (t.kcal <= kp) { KL.className = 'keepline inside'; KL.innerHTML = `🛡 目安は超えたけど、キープライン約${kp}まで <b>あと ${kp - t.kcal} kcal</b>。ここまでなら太らないよ`; }
   else { KL.className = 'keepline out'; KL.innerHTML = `🛡 キープライン約${kp}を <b>${t.kcal - kp} kcal 超え</b>。明日・あさってで少しずつ戻そ`; }
+  // 注意: 直近7日（今日を除く）で目安オーバーの日が3日以上
+  const past7 = s.daily.slice(-8, -1).filter(d => d.logged);
+  const overDays = past7.filter(d => d.kcal > d.target).length;
+  let wmsg = '';
+  if (overDays >= 3) {
+    const ws = (s.weights || []).filter(w => w.avg7 != null);
+    const last = ws[ws.length - 1];
+    const old = last && ws.filter(w => (new Date(last.date) - new Date(w.date)) / 86400000 >= 7).pop();
+    const flat = old && last.avg7 >= old.avg7 - 0.1;
+    wmsg = `⚠ この1週間で目安オーバーが <b>${overDays}日</b>。` +
+      (flat ? '体重も減ってないから、キープライン頼みになってるかも。' : 'キープ内でも、続くと体重は減らないよ。') +
+      'まずは週の半分以上を目安以内にしよ';
+  }
+  $('keepWarn').innerHTML = wmsg;
   const arc = $('ringArc'); const C = 326.7; arc.style.strokeDashoffset = C * (1 - Math.min(1, t.kcal / t.target)); arc.style.stroke = t.kcal > t.target ? 'var(--warn)' : 'var(--accent)';
   const h = new Date().getHours();
   $('todayPill').innerHTML = t.kcal === 0 ? (h < 11 ? 'おはよう！<br>朝ごはん食べた？' : '今日も<br>いっしょに♪') : (t.remain_kcal < 0 ? (kp && t.kcal <= kp ? '目安オーバー<br>でもキープ内！' : 'ちょっと多め！<br>明日戻そ') : t.remain_kcal < 300 ? 'あと少し<br>いい感じ！' : 'いい感じ<br>だよ！この調子♪');
