@@ -55,6 +55,10 @@
   .bubble{background:var(--soft);border-radius:16px;padding:8px 12px;font-size:13px;font-weight:700;color:var(--accent-deep);position:relative;text-align:center}
   .bubble::after{content:"";position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--soft);border-bottom:0}
   .mascot svg{width:92px;height:92px}
+  .keepline{font-size:12px;color:var(--sub);margin-top:4px}
+  .keepline b{color:var(--ink)}
+  .keepline.inside b{color:var(--ok)}
+  .keepline.out b{color:var(--warn)}
   .avatar{border-radius:50%;object-fit:cover;flex:none;box-shadow:0 2px 8px rgba(0,0,0,.15)}
   .mascot .avatar{width:92px;height:92px}
   .chathead .avatar{width:64px;height:64px}
@@ -190,6 +194,7 @@
         <div class="mascot"><div class="bubble" id="todayPill">今日も<br>いっしょに♪</div><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="54" r="38" fill="#ffd9df"/><ellipse cx="50" cy="30" rx="30" ry="14" fill="#8a5a4a"/><circle cx="26" cy="36" r="9" fill="#8a5a4a"/><circle cx="74" cy="36" r="9" fill="#8a5a4a"/><circle cx="38" cy="54" r="3.2" fill="#3b3031"/><circle cx="62" cy="54" r="3.2" fill="#3b3031"/><ellipse cx="30" cy="63" rx="6" ry="3.5" fill="#f7a8b8"/><ellipse cx="70" cy="63" rx="6" ry="3.5" fill="#f7a8b8"/><path d="M43 65 Q50 71 57 65" stroke="#3b3031" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M78 24 l2.5 5 5.5 .8 -4 3.9 .9 5.5 -4.9-2.6 -4.9 2.6 .9-5.5 -4-3.9 5.5-.8z" fill="#f08aa0"/></svg></div>
       </div>
       <div class="muted" id="todaySub" style="margin-top:10px"></div>
+      <div class="keepline" id="keepLine"></div>
       <div class="bar"><i id="todayBar" style="width:0%"></i></div>
     </div>
 
@@ -422,9 +427,16 @@ function render() {
   $('todayBar').className = t.kcal > t.target ? 'over' : '';
   $('todayMain').innerText = t.kcal;
   $('todaySub').innerText = t.remain_kcal >= 0 ? `あと ${t.remain_kcal} kcal（目安 ${t.target}）・たんぱく質 ${t.protein_g}g` : `${-t.remain_kcal} kcal オーバー（目安 ${t.target}）`;
+  // キープライン：ここまでなら体重は増えない量。目安は超えたけどキープ内、のときに安心できるように
+  const kp = s.keep && s.keep.kcal > t.target ? s.keep.kcal : 0;
+  const KL = $('keepLine');
+  if (!kp) { KL.innerHTML = ''; KL.className = 'keepline'; }
+  else if (t.kcal <= t.target) { KL.className = 'keepline'; KL.innerHTML = `🛡 キープライン 約<b>${kp}</b> kcal（ここまでなら増えない）`; }
+  else if (t.kcal <= kp) { KL.className = 'keepline inside'; KL.innerHTML = `🛡 目安は超えたけど、キープライン約${kp}まで <b>あと ${kp - t.kcal} kcal</b>。ここまでなら太らないよ`; }
+  else { KL.className = 'keepline out'; KL.innerHTML = `🛡 キープライン約${kp}を <b>${t.kcal - kp} kcal 超え</b>。明日・あさってで少しずつ戻そ`; }
   const arc = $('ringArc'); const C = 326.7; arc.style.strokeDashoffset = C * (1 - Math.min(1, t.kcal / t.target)); arc.style.stroke = t.kcal > t.target ? 'var(--warn)' : 'var(--accent)';
   const h = new Date().getHours();
-  $('todayPill').innerHTML = t.kcal === 0 ? (h < 11 ? 'おはよう！<br>朝ごはん食べた？' : '今日も<br>いっしょに♪') : (t.remain_kcal < 0 ? 'ちょっと多め！<br>明日戻そ' : t.remain_kcal < 300 ? 'あと少し<br>いい感じ！' : 'いい感じ<br>だよ！この調子♪');
+  $('todayPill').innerHTML = t.kcal === 0 ? (h < 11 ? 'おはよう！<br>朝ごはん食べた？' : '今日も<br>いっしょに♪') : (t.remain_kcal < 0 ? (kp && t.kcal <= kp ? '目安オーバー<br>でもキープ内！' : 'ちょっと多め！<br>明日戻そ') : t.remain_kcal < 300 ? 'あと少し<br>いい感じ！' : 'いい感じ<br>だよ！この調子♪');
   // today list
   const L = $('todayList');
   if (!t.items.length) L.innerHTML = '<div class="muted">まだ記録がないよ</div>';
