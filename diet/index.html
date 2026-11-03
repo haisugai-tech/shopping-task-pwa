@@ -437,17 +437,17 @@ function render() {
   else if (t.kcal <= t.target) { KL.className = 'keepline'; KL.innerHTML = `🛡 キープライン 約<b>${kp}</b> kcal（ここまでなら増えない）`; }
   else if (t.kcal <= kp) { KL.className = 'keepline inside'; KL.innerHTML = `🛡 目安は超えたけど、キープライン約${kp}まで <b>あと ${kp - t.kcal} kcal</b>。ここまでなら太らないよ`; }
   else { KL.className = 'keepline out'; KL.innerHTML = `🛡 キープライン約${kp}を <b>${t.kcal - kp} kcal 超え</b>。明日・あさってで少しずつ戻そ`; }
-  // 注意: 直近7日（今日を除く）で目安オーバーの日が3日以上
+  // 注意: 直近7日（今日を除く）で目安+100kcal超えが3日以上、かつ体重が減っていない
   const past7 = s.daily.slice(-8, -1).filter(d => d.logged);
-  const overDays = past7.filter(d => d.kcal > d.target).length;
+  const overDays = past7.filter(d => d.kcal > d.target + 100).length;
   let wmsg = '';
   if (overDays >= 3) {
     const ws = (s.weights || []).filter(w => w.avg7 != null);
     const last = ws[ws.length - 1];
     const old = last && ws.filter(w => (new Date(last.date) - new Date(w.date)) / 86400000 >= 7).pop();
-    const flat = old && last.avg7 >= old.avg7 - 0.1;
-    wmsg = `⚠ この1週間で目安オーバーが <b>${overDays}日</b>。` +
-      (flat ? '体重も減ってないから、キープライン頼みになってるかも。' : 'キープ内でも、続くと体重は減らないよ。') +
+    const losing = old && last.avg7 < old.avg7 - 0.1;
+    if (!losing) wmsg = `⚠ この1週間で目安オーバーが <b>${overDays}日</b>。` +
+      (old ? '体重も減ってないから、キープライン頼みになってるかも。' : 'キープ内でも、続くと体重は減らないよ。') +
       'まずは週の半分以上を目安以内にしよ';
   }
   $('keepWarn').innerHTML = wmsg;
