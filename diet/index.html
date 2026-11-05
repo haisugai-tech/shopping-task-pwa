@@ -59,6 +59,12 @@
   .keepline b{color:var(--ink)}
   .keepline.inside b{color:var(--ok)}
   .keepline.out b{color:var(--warn)}
+  .tonebar{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+  .tonebar button{border:1px solid var(--line,#ddd);background:transparent;color:var(--ink);border-radius:12px;padding:8px 2px;font-size:20px;line-height:1.2;cursor:pointer}
+  .tonebar button b{display:block;font-size:11px;font-weight:600;margin-top:2px}
+  .tonebar button.on{background:var(--accent,#f08aa0);color:#fff;border-color:transparent}
+  .tonebar button[data-t="5"].on{background:#b3261e}
+  .tonesample{font-size:13px;margin:10px 0 0;padding:10px 12px;border-radius:12px;background:rgba(127,127,127,.1);line-height:1.5}
   .keepwarn{font-size:12px;color:var(--warn);margin-top:4px;line-height:1.5}
   .keepwarn:empty{display:none}
   .avatar{border-radius:50%;object-fit:cover;flex:none;box-shadow:0 2px 8px rgba(0,0,0,.15)}
@@ -311,6 +317,18 @@
       </div>
       <div class="field"><label>いつまでに</label><input id="pDate" type="date"></div>
       <p class="muted" id="paceNote" style="margin:4px 0 0"></p>
+    </div>
+    <div class="card">
+      <div class="label">コーチの厳しさ</div>
+      <div class="tonebar" id="toneBar">
+        <button data-t="1">😊<b>やさしい</b></button>
+        <button data-t="2">🙂<b>ふつう</b></button>
+        <button data-t="3">😐<b>ちょい厳</b></button>
+        <button data-t="4">😠<b>スパルタ</b></button>
+        <button data-t="5">👹<b>鬼</b></button>
+      </div>
+      <p class="tonesample" id="toneSample"></p>
+      <p class="muted" style="margin:4px 0 0">相談・1週間の総評・記録のひとことの話し方が変わるよ（数字は同じ）。タップですぐ反映。</p>
     </div>
     <div class="card" id="kcalCard">
       <div class="label">1日の目安</div>
@@ -748,6 +766,7 @@ async function loadProfile() {
     $('pStart').value = p.start_weight || ''; $('pGoal').value = p.goal_weight || ''; $('pDate').value = p.goal_date || '';
     $('pKcal').value = p.kcal_target || ''; $('pProt').value = p.protein_target || '';
     $('kcalCard').classList.toggle('hidden', !p.show_numbers);
+    showTone(p.tone || 2);
     paceNote();
   } catch (e) { toast(e.message, true); }
 }
@@ -780,6 +799,24 @@ $('suggestBtn').onclick = async () => {
       : `${basis}そこから期限に間に合う分を引いて、目安 ${j.kcal}kcal／日。よければ「保存」を押してね`;
   } catch (e) { $('suggestNote').innerText = e.message; }
 };
+const TONE_SAMPLE = {
+  1: '「ちょっと食べすぎちゃったね〜。でも記録できてるのえらい！夜は軽めにしよっか😊」',
+  2: '「目安より300kcalオーバー。夜を500kcal前後にすると取り戻せます」',
+  3: '「300オーバー。ラーメンのスープが効いてる。夜は500以内にしよう」',
+  4: '「300オーバーだ。言い訳はいい。今日の夜は500以内。守れ」',
+  5: '「300オーバー？甘えるな。夜は500以内、1kcalも超えるな。聞こえたか」'
+};
+function showTone(t) {
+  t = Number(t) || 2;
+  document.querySelectorAll('#toneBar button').forEach(b => b.classList.toggle('on', Number(b.dataset.t) === t));
+  $('toneSample').textContent = TONE_SAMPLE[t];
+}
+document.querySelectorAll('#toneBar button').forEach(b => b.onclick = async () => {
+  const t = Number(b.dataset.t), prev = PROFILE && PROFILE.tone;
+  showTone(t);
+  try { const j = await api({ action: 'updateProfile', tone: t }); PROFILE = j.profile; toast(t === 5 ? '覚悟しろ👹' : '話し方を変えたよ'); }
+  catch (e) { showTone(prev); toast(e.message, true); }
+});
 $('saveProfile').onclick = async () => {
   $('saveProfile').disabled = true;
   try {
